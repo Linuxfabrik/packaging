@@ -1,0 +1,32 @@
+repos:
+  - repo: 'https://github.com/gitleaks/gitleaks'
+    rev: 'v8.30.0'
+    hooks:
+      - id: 'gitleaks'
+
+  - repo: 'https://github.com/jumanjihouse/pre-commit-hooks'
+    rev: '3.0.0'
+    hooks:
+      - id: 'shellcheck'
+        # PKGBUILDs are makepkg recipes, not standalone scripts: they have no
+        # shebang and rely on makepkg-provided variables ($srcdir, $pkgdir, ...).
+        exclude: '(^|/)PKGBUILD$'
+
+  - repo: 'https://github.com/pre-commit/pre-commit-hooks'
+    rev: 'v6.0.0'
+    hooks:
+      - id: 'check-added-large-files'
+      - id: 'check-merge-conflict'
+      - id: 'check-yaml'
+      - id: 'end-of-file-fixer'
+        # LICENSE is the verbatim Unlicense text, kept byte-identical across all
+        # Linuxfabrik repositories; do not append a trailing newline.
+        exclude: '^LICENSE$'
+      - id: 'trailing-whitespace'
+
+  - repo: 'https://github.com/astral-sh/ruff-pre-commit'
+    rev: 'v0.15.17'
+    hooks:
+      - id: 'ruff-check'
+        args: ['--fix']
+      - id: 'ruff-format'

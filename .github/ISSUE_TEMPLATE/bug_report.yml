@@ -1,0 +1,60 @@
+name: "Bug report"
+description: "Report a problem with a Linuxfabrik package or the build pipeline"
+title: "package-name: A short sentence describing the problem"
+labels: ["bug"]
+assignees: [""]
+body:
+
+  - type: markdown
+    attributes:
+      value: |
+        ### Thank you for contributing to this project!
+        Please note this is a **free and open-source** project. Most people take on their own time to help you, so please, be patient. You can obtain [Enterprise support](https://www.linuxfabrik.ch/en/products/service-support) if you need some kind of SLA.
+
+  - type: checkboxes
+    id: before-posting
+    attributes:
+      label: 'This issue respects the following points:'
+      description: |
+        All conditions are **required**. Your issue can be closed if these are checked incorrectly.
+      options:
+        - label: This is a **bug**, not a question or a setup/configuration issue.
+          required: true
+        - label: This issue is **not** already reported on Github _(I've searched it)_.
+          required: true
+        - label: I agree to follow this project's [Code of Conduct](https://github.com/Linuxfabrik/packaging/blob/main/CODE_OF_CONDUCT.md).
+          required: true
+
+  - type: input
+    id: package
+    attributes:
+      label: Affected package
+      description: |
+        Which package is affected, and which version? For example: `glances 4.5.4`.
+    validations:
+      required: true
+
+  - type: input
+    id: distro
+    attributes:
+      label: Distribution
+      description: |
+        On which distribution and version does the problem occur? For example: `Rocky Linux 10`, `Debian 13`.
+    validations:
+      required: true
+
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: Bug description
+      description: |
+        Provide a clear and concise description of the bug, including how to reproduce it and what you expected instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-info
+    attributes:
+      label: Additional Information
+      description: |
+        Any additional information related to the issue, e.g. relevant log output.

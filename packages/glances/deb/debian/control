@@ -1,0 +1,28 @@
+Source: glances
+Maintainer: Linuxfabrik GmbH <info@linuxfabrik.ch>
+Section: utils
+Priority: optional
+Standards-Version: 4.6.2
+Homepage: https://github.com/nicolargo/glances
+Rules-Requires-Root: no
+Build-Depends: debhelper-compat (= 13),
+               dh-python,
+               pybuild-plugin-pyproject,
+               python3-all,
+               python3-setuptools
+
+Package: glances
+Architecture: all
+Depends: ${misc:Depends},
+         ${python3:Depends},
+         python3-fastapi,
+         python3-jinja2,
+         python3-uvicorn
+Description: cross-platform system monitoring tool
+ Glances is a cross-platform monitoring tool which aims to present a large
+ amount of monitoring information through a curses or web based interface. The
+ information dynamically adapts depending on the size of the user interface.
+ .
+ It can also work in client/server mode. Remote monitoring could be done via
+ terminal, web interface or API (XML-RPC and RESTful). Stats can also be
+ exported to files or external time/value databases.

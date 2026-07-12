@@ -1,0 +1,65 @@
+name: 'Linuxfabrik: Check upstream versions'
+
+on:
+  schedule:
+    # Daily at 04:00 UTC.
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: 'read'
+
+jobs:
+  check-upstream:
+    runs-on:
+      - 'ubuntu-24.04'
+    permissions:
+      contents: 'write'
+      pull-requests: 'write'
+    steps:
+      - name: 'Harden the runner (Audit all outbound calls)'
+        uses: 'step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411' # v2.19.4
+        with:
+          egress-policy: 'audit'
+
+      - name: 'git clone https://github.com/Linuxfabrik/packaging'
+        uses: 'actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10' # v6.0.3
+
+      - name: 'Open a version-bump PR for every package behind its upstream'
+        env:
+          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+
+          for dir in packages/*/; do
+            name="$(basename "$dir")"
+
+            # check-upstream.sh exits 0 only when a newer upstream version exists.
+            if versions="$(bash build/check-upstream.sh "$dir")"; then
+              current="$(echo "$versions" | cut -d' ' -f1)"
+              latest="$(echo "$versions" | cut -d' ' -f2)"
+              branch="bump/$name-$latest"
+
+              # Skip if the bump PR already exists.
+              if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+                echo "Branch $branch already exists, skipping $name."
+                continue
+              fi
+
+              echo "Bumping $name: $current -> $latest"
+              git checkout -b "$branch"
+              bash build/check-upstream.sh --write "$dir" >/dev/null
+              git add "$dir/package.conf"
+              git commit -m "build($name): bump to $latest"
+              git push origin "$branch"
+
+              gh pr create \
+                --base 'main' \
+                --head "$branch" \
+                --title "build($name): bump to $latest" \
+                --body "Upstream released \`$latest\` (packaged: \`$current\`). Merging this triggers a build and publish of \`$name\` $latest."
+
+              git checkout main
+            fi
+          done

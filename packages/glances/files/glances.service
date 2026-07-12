@@ -1,0 +1,11 @@
+[Unit]
+Description=Glances Web server
+Documentation=https://nicolargo.github.io/glances/
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/glances -w
+Restart=on-abort
+
+[Install]
+WantedBy=multi-user.target

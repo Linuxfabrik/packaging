@@ -1,0 +1,28 @@
+# Build output
+/packaged/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+*.egg-info/
+*.egg
+dist/
+build/*.tar.gz
+
+# Caches
+.cache
+.mypy_cache/
+.ruff_cache/
+
+# Environments
+.env
+.venv
+env/
+venv/
+
+# Editors / OS
+.~lock.*
+.DS_Store

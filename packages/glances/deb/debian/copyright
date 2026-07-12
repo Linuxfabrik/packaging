@@ -1,0 +1,25 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: glances
+Upstream-Contact: Nicolas Hennion <nicolas@nicolargo.com>
+Source: https://github.com/nicolargo/glances
+
+Files: *
+Copyright: 2011-2024 Nicolas Hennion <nicolas@nicolargo.com>
+License: LGPL-3.0-only
+ This package is free software; you can redistribute it and/or modify it under
+ the terms of the GNU Lesser General Public License version 3 as published by
+ the Free Software Foundation.
+ .
+ On Debian systems, the complete text of the GNU Lesser General Public License
+ version 3 can be found in "/usr/share/common-licenses/LGPL-3".
+
+Files: debian/*
+Copyright: 2026 Linuxfabrik GmbH <info@linuxfabrik.ch>
+License: Unlicense
+ This is free and unencumbered software released into the public domain.
+ .
+ Anyone is free to copy, modify, publish, use, compile, sell, or distribute
+ this software, either in source code form or as a compiled binary, for any
+ purpose, commercial or non-commercial, and by any means.
+ .
+ For more information, please refer to <https://unlicense.org/>.

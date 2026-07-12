@@ -1,0 +1,103 @@
+name: 'Linuxfabrik: Build Linux (x86_64)'
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'Name of the package to build, matching a directory under `packages/` (e.g. `glances`).'
+        required: true
+      target-distros:
+        description: 'Space-separated list of distros to build on. Supported: `arch debian-v11 debian-v12 debian-v13 fedora-v44 rocky-v8 rocky-v9 rocky-v10 sles-v15 sles-v16 ubuntu-v2004 ubuntu-v2204 ubuntu-v2404 ubuntu-v2604`. Leave empty to use the package`s configured defaults.'
+        required: false
+        default: ''
+      package-iteration:
+        description: 'Build iteration of this version. Always `1` on the first build of a version; increment only when re-building the same upstream version.'
+        required: true
+        default: '1'
+  workflow_call:
+    inputs:
+      package:
+        required: true
+        type: 'string'
+      target-distros:
+        required: false
+        type: 'string'
+        default: ''
+      package-iteration:
+        required: false
+        type: 'string'
+        default: '1'
+
+permissions:
+  contents: 'read'
+
+jobs:
+  prepare-matrix:
+    runs-on:
+      - 'ubuntu-24.04'
+    outputs:
+      distro_list: '${{ steps.set-matrix.outputs.distro_list }}'
+    steps:
+      - name: 'Harden the runner (Audit all outbound calls)'
+        uses: 'step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411' # v2.19.4
+        with:
+          egress-policy: 'audit'
+
+      - name: 'git clone https://github.com/Linuxfabrik/packaging'
+        uses: 'actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10' # v6.0.3
+
+      - id: 'set-matrix'
+        run: |
+          # Use the explicit distro list if given, otherwise fall back to the
+          # package`s PKG_RPM_DISTROS + PKG_DEB_DISTROS from its package.conf.
+          input="${{ inputs.target-distros }}"
+          if [ -z "$input" ]; then
+            # shellcheck source=/dev/null
+            source "packages/${{ inputs.package }}/package.conf"
+            input="${PKG_RPM_DISTROS:-} ${PKG_DEB_DISTROS:-} ${PKG_PACMAN_DISTROS:-}"
+          fi
+          # Trim and turn the space-separated list into a JSON array.
+          input="$(echo "$input" | xargs)"
+          json_array=$(echo "$input" | sed 's/ /","/g')
+          json_array='["'"$json_array"'"]'
+          echo "Computed JSON array: $json_array"
+          echo "distro_list=$json_array" >> "$GITHUB_OUTPUT"
+
+  build-linux-x86_64:
+    needs: 'prepare-matrix'
+    runs-on:
+      - 'ubuntu-24.04'
+    strategy:
+      matrix:
+        distro: '${{ fromJson(needs.prepare-matrix.outputs.distro_list) }}'
+    steps:
+      - name: 'Harden the runner (Audit all outbound calls)'
+        uses: 'step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411' # v2.19.4
+        with:
+          egress-policy: 'audit'
+
+      - name: 'Set environment variables for the build scripts'
+        run: |
+          echo "PKG_NAME=${{ inputs.package }}" >> "$GITHUB_ENV"
+          echo "PKG_ARCH=x86_64" >> "$GITHUB_ENV"
+          echo "PKG_PACKAGE_ITERATION=${{ inputs.package-iteration }}" >> "$GITHUB_ENV"
+          # One distro per matrix job, to parallelize and avoid GitHub`s 6h timeout.
+          echo "PKG_TARGET_DISTROS=${{ matrix.distro }}" >> "$GITHUB_ENV"
+          echo "PKG_DIR_REPO=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
+          echo "PKG_DIR_PACKAGED=$RUNNER_TEMP/packaged" >> "$GITHUB_ENV"
+
+      - name: 'git clone https://github.com/Linuxfabrik/packaging'
+        uses: 'actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10' # v6.0.3
+
+      - name: 'Create working directories'
+        run: 'mkdir -p "$PKG_DIR_PACKAGED"'
+
+      - name: 'For each distro create package'
+        run: '/bin/bash "$PKG_DIR_REPO/build/matrix-package.sh"'
+
+      - name: 'Upload the packages (rpm, deb)'
+        uses: 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a' # v7.0.1
+        with:
+          compression-level: 8
+          path: '${{ env.PKG_DIR_PACKAGED }}/*'
+          name: '${{ inputs.package }}-${{ env.PKG_ARCH }}-${{ matrix.distro }}'

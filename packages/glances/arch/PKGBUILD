@@ -1,0 +1,45 @@
+# Maintainer: Linuxfabrik GmbH <info@linuxfabrik.ch>
+#
+# Based on the official Arch Linux glances package
+# (https://gitlab.archlinux.org/archlinux/packaging/packages/glances). Adapted to
+# the Linuxfabrik packaging conventions: the source tarball is provided locally by
+# build/create-pacman.sh, pkgver/pkgrel are injected from package.conf, and the
+# shared systemd unit comes from the package's files/ directory.
+pkgname=glances
+pkgver=0
+pkgrel=0
+pkgdesc='CLI curses-based monitoring tool'
+arch=('any')
+url='https://nicolargo.github.io/glances'
+license=('LGPL-3.0-or-later')
+depends=('python' 'python-defusedxml' 'python-jinja' 'python-orjson' 'python-packaging'
+         'python-psutil' 'python-pydantic' 'python-shtab')
+makedepends=('python-build' 'python-installer' 'python-setuptools' 'python-wheel')
+optdepends=('python-fastapi: for the WebUI / RESTful API'
+            'uvicorn: for the WebUI / RESTful API'
+            'python-docker: for the Docker monitoring support'
+            'python-podman: for the Podman monitoring support'
+            'python-matplotlib: for graphical/chart support'
+            'python-zeroconf: for the autodiscover mode')
+backup=("etc/${pkgname}/${pkgname}.conf")
+source=("${pkgname}-${pkgver}.tar.gz" "${pkgname}.service")
+sha256sums=('SKIP' 'SKIP')
+
+prepare() {
+    cd "${pkgname}-${pkgver}"
+    # Disable the network-bound "new version available" check; a pip-based upgrade
+    # hint is wrong for a pacman-managed install.
+    sed --in-place 's/^check_update=true/check_update=false/' conf/glances.conf
+}
+
+build() {
+    cd "${pkgname}-${pkgver}"
+    python -m build --wheel --no-isolation
+}
+
+package() {
+    cd "${pkgname}-${pkgver}"
+    python -m installer --destdir="${pkgdir}" dist/*.whl
+    install -Dm644 "conf/${pkgname}.conf" "${pkgdir}/etc/${pkgname}/${pkgname}.conf"
+    install -Dm644 "${srcdir}/${pkgname}.service" "${pkgdir}/usr/lib/systemd/system/${pkgname}.service"
+}

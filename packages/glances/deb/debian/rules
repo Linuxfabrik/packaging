@@ -1,0 +1,26 @@
+#!/usr/bin/make -f
+
+export PYBUILD_NAME=glances
+
+%:
+	dh $@ --with python3 --buildsystem=pybuild
+
+override_dh_auto_configure:
+	# pyinstrument is declared in pyproject.toml but never imported by glances
+	# and is not packaged; drop it so the build does not pull an unmet dep.
+	sed -i '/pyinstrument/d' pyproject.toml
+	# Older setuptools predates the PEP 639 SPDX license string; rewrite it
+	# into the table form it accepts.
+	sed -i 's/^license = "\(.*\)"$$/license = {text = "\1"}/' pyproject.toml
+	dh_auto_configure
+
+override_dh_auto_test:
+	# Skip the upstream test suite: it imports runtime dependencies and probes a
+	# live system, which is not appropriate during a package build.
+
+override_dh_auto_install:
+	dh_auto_install
+	# Disable the network-bound "new version available" check; pip-based upgrade
+	# advice is wrong for a dpkg-managed install.
+	sed -i 's/^check_update=true/check_update=false/' conf/glances.conf
+	install -D -m 0644 conf/glances.conf debian/glances/etc/glances/glances.conf

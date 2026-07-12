@@ -1,0 +1,40 @@
+name: "Feature request"
+description: "Suggest a new package to ship or an improvement to the build pipeline"
+title: "A short sentence describing the request"
+labels: ["enhancement"]
+assignees: [""]
+body:
+
+  - type: markdown
+    attributes:
+      value: |
+        ### Thank you for contributing to this project!
+        Please note this is a **free and open-source** project. Most people take on their own time to help you, so please, be patient. You can obtain [Enterprise support](https://www.linuxfabrik.ch/en/products/service-support) if you need some kind of SLA.
+
+  - type: checkboxes
+    id: before-posting
+    attributes:
+      label: 'This issue respects the following points:'
+      options:
+        - label: This issue is **not** already reported on Github _(I've searched it)_.
+          required: true
+        - label: I agree to follow this project's [Code of Conduct](https://github.com/Linuxfabrik/packaging/blob/main/CODE_OF_CONDUCT.md).
+          required: true
+
+  - type: input
+    id: package
+    attributes:
+      label: Package or area
+      description: |
+        Which software should we package (Linuxfabrik's own or third-party), or which part of the pipeline should improve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: |
+        Describe the request and the use case behind it.
+    validations:
+      required: true

@@ -1,0 +1,11 @@
+FROM registry.fedoraproject.org/fedora:44
+
+# Build toolchain: gcc for any C extensions, the python headers, rpmdevtools for
+# rpmbuild, and dnf-plugins-core for `dnf builddep`.
+RUN dnf --assumeyes install --nodocs \
+        dnf-plugins-core \
+        gcc \
+        python3-devel \
+        python3-pip \
+        rpmdevtools && \
+    dnf clean all
