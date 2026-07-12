@@ -42,9 +42,6 @@ rocky-* | rhel-* | almalinux-* | centos-* | fedora-* | sles-*)
 debian-* | ubuntu-*)
     bash "$PKG_DIR_REPO/build/create-deb.sh" "$PKG_DIR_PACKAGE/$PKG_DEB_DEBIAN_DIR"
     ;;
-arch | arch-*)
-    bash "$PKG_DIR_REPO/build/create-pacman.sh" "$PKG_DIR_PACKAGE/$PKG_PKGBUILD"
-    ;;
 *)
     echo "Unsupported target distro: $PKG_TARGET_DISTRO" >&2
     exit 1

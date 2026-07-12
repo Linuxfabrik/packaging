@@ -8,9 +8,6 @@ repos:
     rev: '3.0.0'
     hooks:
       - id: 'shellcheck'
-        # PKGBUILDs are makepkg recipes, not standalone scripts: they have no
-        # shebang and rely on makepkg-provided variables ($srcdir, $pkgdir, ...).
-        exclude: '(^|/)PKGBUILD$'
 
   - repo: 'https://github.com/pre-commit/pre-commit-hooks'
     rev: 'v6.0.0'

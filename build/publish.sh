@@ -21,7 +21,6 @@
 #                         pulp deb publication create --repository=<repo>
 # Channels release/testing map to the target repository/distribution. Distributions
 # are created with --repository, so the newest publication is served immediately.
-# Arch/pacman has no Pulp plugin and no repository in the layout -- an open question.
 # See CONTRIBUTING.md "Publishing to Pulp".
 #
 # Required environment (planned):

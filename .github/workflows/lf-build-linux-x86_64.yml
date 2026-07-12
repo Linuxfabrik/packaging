@@ -7,7 +7,7 @@ on:
         description: 'Name of the package to build, matching a directory under `packages/` (e.g. `glances`).'
         required: true
       target-distros:
-        description: 'Space-separated list of distros to build on. Supported: `arch debian-v11 debian-v12 debian-v13 fedora-v44 rocky-v8 rocky-v9 rocky-v10 sles-v15 sles-v16 ubuntu-v2004 ubuntu-v2204 ubuntu-v2404 ubuntu-v2604`. Leave empty to use the package`s configured defaults.'
+        description: 'Space-separated list of distros to build on. Supported: `debian-v11 debian-v12 debian-v13 fedora-v44 rocky-v8 rocky-v9 rocky-v10 sles-v15 sles-v16 ubuntu-v2004 ubuntu-v2204 ubuntu-v2404 ubuntu-v2604`. Leave empty to use the package`s configured defaults.'
         required: false
         default: ''
       package-iteration:
@@ -54,7 +54,7 @@ jobs:
           if [ -z "$input" ]; then
             # shellcheck source=/dev/null
             source "packages/${{ inputs.package }}/package.conf"
-            input="${PKG_RPM_DISTROS:-} ${PKG_DEB_DISTROS:-} ${PKG_PACMAN_DISTROS:-}"
+            input="${PKG_RPM_DISTROS:-} ${PKG_DEB_DISTROS:-}"
           fi
           # Trim and turn the space-separated list into a JSON array.
           input="$(echo "$input" | xargs)"

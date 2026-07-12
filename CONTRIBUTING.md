@@ -95,10 +95,10 @@ Python packages installed via `pip` inside workflows follow a two-tier policy:
 ---
 
 
-This repository builds Linuxfabrik RPM, DEB and pacman packages from both
-Linuxfabrik's own products and third-party upstream software, and publishes them
-on [repo.linuxfabrik.ch](https://repo.linuxfabrik.ch). It is open to an arbitrary
-number of packages.
+This repository builds Linuxfabrik RPM and DEB packages from both Linuxfabrik's own
+products and third-party upstream software, and publishes them on
+[repo.linuxfabrik.ch](https://repo.linuxfabrik.ch). It is open to an arbitrary number
+of packages.
 
 
 ## Concepts
@@ -110,13 +110,12 @@ Each package brings:
   source, the version to package and the per-format target distributions.
 - `rpm/<name>.spec`: the RPM recipe (EL, Fedora, SLES).
 - `deb/debian/`: the DEB recipe (`control`, `rules`, `copyright`, `source/format`).
-- `arch/PKGBUILD`: the pacman recipe (Arch).
 - `files/`: assets shared between the formats, e.g. the systemd unit.
 
 A package only ships the recipes for the formats it targets. The build is
 package-agnostic: `build/create-package.sh` reads the manifest, fetches the
-source and dispatches to `create-rpm.sh`, `create-deb.sh` or `create-pacman.sh`
-depending on the target distro. `matrix-package.sh` runs that across many distros,
+source and dispatches to `create-rpm.sh` or `create-deb.sh` depending on the
+target distro. `matrix-package.sh` runs that across many distros,
 each inside the matching container from `build/containerfiles/`.
 
 
@@ -129,20 +128,18 @@ package only targets the formats and distros it needs:
   `centos-*`), `fedora-*` and `sles-*`. Built with `rpmbuild`; build dependencies are resolved
   with `dnf builddep` on EL/Fedora and with a zypper fallback on SLES.
 - **DEB** (`PKG_DEB_DEBIAN_DIR`, `PKG_DEB_DISTROS`): `debian-*`, `ubuntu-*`. Built with `debuild`.
-- **pacman** (`PKG_PKGBUILD`, `PKG_PACMAN_DISTROS`): `arch`. Built with `makepkg` as an
-  unprivileged user, since makepkg refuses to run as root.
 
 
 ## Why native recipes, not FPM
 
-We build with each format's native tooling (`rpmbuild` / `debuild` / `makepkg`) and hand-written
-recipes rather than a cross-format generator such as [FPM](https://github.com/jordansissel/fpm).
+We build with each format's native tooling (`rpmbuild` / `debuild`) and hand-written recipes
+rather than a cross-format generator such as [FPM](https://github.com/jordansissel/fpm).
 Linuxfabrik used FPM before and dropped it: it is not flexible enough for real packaging,
 especially for Python virtual environments (control over the venv layout, interpreter paths,
 `%pyproject` macro integration and precise dependency generation). Native recipes also let us
-adopt an upstream or distribution recipe (a `.spec`, a `debian/` directory, a `PKGBUILD`) almost
-as-is and base each package on the official packaging (see below), instead of reconstructing its
-logic through FPM flags.
+adopt an upstream or distribution recipe (a `.spec` or a `debian/` directory) almost as-is and
+base each package on the official packaging (see below), instead of reconstructing its logic
+through FPM flags.
 
 
 ## The manifest (`package.conf`)
@@ -157,8 +154,6 @@ PKG_RPM_SPEC='rpm/glances.spec'
 PKG_RPM_DISTROS='rocky-v10 fedora-v44'   # EL and Fedora targets
 PKG_DEB_DEBIAN_DIR='deb/debian'
 PKG_DEB_DISTROS='debian-v13 ubuntu-v2404'
-PKG_PKGBUILD='arch/PKGBUILD'
-PKG_PACMAN_DISTROS='arch'
 PKG_REPO_SUBDIR='glances'           # sub-directory under repo.linuxfabrik.ch
 ```
 
@@ -169,15 +164,14 @@ so the version lives only in the manifest.
 ## Distro-native builds
 
 The default build model is **distro-native**: recipes use each format's standard toolchain
-(`pyproject-rpm-macros` / `pybuild` / a plain `PKGBUILD`), and the runtime dependencies (and,
-for GUI apps, PySide6/Qt) are pulled from the target distribution. This keeps packages small
-(noarch / `any` where possible) and lets the distribution own the interpreter and the dependency
-stack.
+(`pyproject-rpm-macros` / `pybuild`), and the runtime dependencies (and, for GUI apps, PySide6/Qt)
+are pulled from the target distribution. This keeps packages small (noarch where possible) and
+lets the distribution own the interpreter and the dependency stack.
 
 We build one package file per distro and version, never a single universal artifact: RPMs carry
-the distribution's `%{?dist}` tag (`...-1.el10.noarch.rpm`, `...-1.fc44.noarch.rpm`), DEBs are
-built per suite and pacman packages per Arch build. Each distro+version is published into its own
-repository tree, because dependency names and versions differ per release.
+the distribution's `%{?dist}` tag (`...-1.el10.noarch.rpm`, `...-1.fc44.noarch.rpm`) and DEBs are
+built per suite. Each distro+version is published into its own repository tree, because dependency
+names and versions differ per release.
 
 A product can therefore only target distributions that ship a recent enough interpreter and
 dependency versions. Verify this per product, in a container, before declaring a target. Two
@@ -201,12 +195,11 @@ reference packaging and adapt it to the conventions here:
 
 - RPM: the Fedora/EPEL spec.
 - DEB: the Debian package's `debian/` directory.
-- pacman: the official Arch `PKGBUILD`.
 
 This gets the per-distro details right, and they differ more than they look: dependency names,
 the split between hard dependencies and optional ones, the license identifier and the build
 steps. For example, glances' web-UI dependencies are hard requirements in the Fedora spec but
-`optdepends` on Arch, and `uvicorn` is not even in the official Arch repositories. Keep only the
+optional in another distribution's packaging. Keep only the
 Linuxfabrik-specific deltas on top of the reference: the shared `files/`, the version injected
 from `package.conf`, and the locally provided source tarball.
 
@@ -216,16 +209,16 @@ from `package.conf`, and the locally provided source tarball.
 A GUI application ships as two packages from one source, so that a CLI-only install never pulls
 the heavy GUI stack. The base package owns the CLI/library code and its dependencies; a separate
 `-gui` package owns only the GUI code and depends on the distro GUI toolkit (`python3-pyside6` on
-EL/Debian/Ubuntu, `pyside6` on Arch). Because the toolkit dependency lives only in the `-gui`
+EL/Debian/Ubuntu). Because the toolkit dependency lives only in the `-gui`
 package, installing the base alone never pulls it. FirewallFabrik is the first such case
 (issue #114): `linuxfabrik-firewallfabrik` and `linuxfabrik-firewallfabrik-gui`.
 
 
 ## Adding a package
 
-1. Create `packages/<name>/` with the manifest and the recipes you need (`rpm/`, `deb/`, `arch/`).
-2. Pick the smallest set of `PKG_RPM_DISTROS` / `PKG_DEB_DISTROS` / `PKG_PACMAN_DISTROS` that
-   the package actually needs. Not every package targets every distro or format.
+1. Create `packages/<name>/` with the manifest and the recipes you need (`rpm/`, `deb/`).
+2. Pick the smallest set of `PKG_RPM_DISTROS` / `PKG_DEB_DISTROS` that the package actually
+   needs. Not every package targets every distro or format.
 3. Build locally and verify the package installs and runs:
 
    ```bash
@@ -281,9 +274,9 @@ deployed yet, and the target repositories and signing service are provisioned as
 of that rollout. The earlier per-package `createrepo`/`freight` publishing is being
 retired and must not be wired here.
 
-**Arch/pacman has no home in this model.** Pulp ships `pulp_rpm`, `pulp_deb` and
-`pulp_file` but no pacman plugin (verified against the Pulp source), so pacman packages
-can be built but currently have no distribution channel. This is an open question.
+**Arch/pacman is intentionally out of scope.** Pulp ships `pulp_rpm`, `pulp_deb` and
+`pulp_file` but no pacman plugin (verified against the Pulp source), so there is no Linuxfabrik
+distribution channel for pacman packages; the packaging repo therefore does not build them.
 
 
 ## Code style

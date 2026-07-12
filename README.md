@@ -2,7 +2,7 @@
   <a href="https://linuxfabrik.ch" target="_blank">Linuxfabrik</a> Packaging
 </h1>
 <p align="center">
-  Build pipeline that turns Linuxfabrik's own and third-party software into RPM, DEB and pacman packages and publishes them on <a href="https://repo.linuxfabrik.ch">repo.linuxfabrik.ch</a>.
+  Build pipeline that turns Linuxfabrik's own and third-party software into RPM and DEB packages and publishes them on <a href="https://repo.linuxfabrik.ch">repo.linuxfabrik.ch</a>.
   <span>&#8226;</span>
   <b>made by <a href="https://linuxfabrik.ch/">Linuxfabrik</a></b>
 </p>
@@ -22,19 +22,19 @@
 # Linuxfabrik Packaging
 
 This repository is the single, organization-wide place where Linuxfabrik software is turned into
-RPM, DEB and pacman packages for [repo.linuxfabrik.ch](https://repo.linuxfabrik.ch). It packages
-both Linuxfabrik's own products (e.g. FirewallFabrik) and third-party upstream software (e.g.
-glances, mysqltuner, mydumper). Source repositories stay source-only; the build recipes and
-pipeline live here once instead of being duplicated into every project's CI.
+RPM and DEB packages for [repo.linuxfabrik.ch](https://repo.linuxfabrik.ch). It packages both
+Linuxfabrik's own products (e.g. FirewallFabrik) and third-party upstream software (e.g. glances,
+mysqltuner, mydumper). Source repositories stay source-only; the build recipes and pipeline live
+here once instead of being duplicated into every project's CI.
 
-Each package lives under `packages/<name>/` and brings its RPM, DEB and/or PKGBUILD recipe plus a
-small `package.conf` manifest. The build is package-agnostic: the manifest declares the source
-and the target distributions, and the shared scripts under `build/` fetch the source, build
-inside a per-distro container and collect the resulting packages, one file per distro and version.
+Each package lives under `packages/<name>/` and brings its RPM and/or DEB recipe plus a small
+`package.conf` manifest. The build is package-agnostic: the manifest declares the source and the
+target distributions, and the shared scripts under `build/` fetch the source, build inside a
+per-distro container and collect the resulting packages, one file per distro and version.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add a package and for the packaging conventions
-(the three formats, distro-native builds, basing third-party recipes on the official packaging,
-the split-package pattern for GUI apps, and the release trigger).
+(distro-native builds, basing third-party recipes on the official packaging, the split-package
+pattern for GUI apps, and the release trigger).
 
 
 ## Repository layout
@@ -44,14 +44,12 @@ packages/<name>/
   package.conf            # manifest: source, version, per-format distro targets
   rpm/<name>.spec         # RPM recipe (EL, Fedora, SLES)
   deb/debian/             # DEB recipe (control, rules, copyright, source/format)
-  arch/PKGBUILD           # pacman recipe (Arch)
   files/                  # shared assets, e.g. the systemd unit
 build/
-  containerfiles/         # one build environment per distro (rocky-*, fedora-*, debian-*, arch, ...)
+  containerfiles/         # one build environment per distro (rocky-*, fedora-*, debian-*, ...)
   create-package.sh       # entry point: fetch source, dispatch to the format builder
   create-rpm.sh           # build a binary RPM from a spec (dnf or zypper)
   create-deb.sh           # build a binary .deb from a debian/ recipe
-  create-pacman.sh        # build a pacman package from a PKGBUILD
   matrix-package.sh       # build one package across many distros, each in a container
   publish.sh              # hand the built packages to the repo server
 ```
@@ -59,8 +57,8 @@ build/
 
 ## Adding a package
 
-1. Create `packages/<name>/` with `package.conf`, the recipes you need (`rpm/`, `deb/`, `arch/`) and any shared `files/`.
-2. Set the source, version and the `PKG_RPM_DISTROS` / `PKG_DEB_DISTROS` / `PKG_PACMAN_DISTROS` targets in `package.conf`.
+1. Create `packages/<name>/` with `package.conf`, the recipes you need (`rpm/`, `deb/`) and any shared `files/`.
+2. Set the source, version and the `PKG_RPM_DISTROS` / `PKG_DEB_DISTROS` targets in `package.conf`.
 3. Build locally to verify (see below).
 4. Open a pull request. On merge, the pipeline builds and publishes the package.
 
