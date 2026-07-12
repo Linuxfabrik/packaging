@@ -39,12 +39,12 @@ jobs:
       distro_list: '${{ steps.set-matrix.outputs.distro_list }}'
     steps:
       - name: 'Harden the runner (Audit all outbound calls)'
-        uses: 'step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411' # v2.19.4
+        uses: 'step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920' # v2.20.0
         with:
           egress-policy: 'audit'
 
       - name: 'git clone https://github.com/Linuxfabrik/packaging'
-        uses: 'actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10' # v6.0.3
+        uses: 'actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0' # v7.0.0
 
       - id: 'set-matrix'
         run: |
@@ -72,7 +72,7 @@ jobs:
         distro: '${{ fromJson(needs.prepare-matrix.outputs.distro_list) }}'
     steps:
       - name: 'Harden the runner (Audit all outbound calls)'
-        uses: 'step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411' # v2.19.4
+        uses: 'step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920' # v2.20.0
         with:
           egress-policy: 'audit'
 
@@ -87,7 +87,7 @@ jobs:
           echo "PKG_DIR_PACKAGED=$RUNNER_TEMP/packaged" >> "$GITHUB_ENV"
 
       - name: 'git clone https://github.com/Linuxfabrik/packaging'
-        uses: 'actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10' # v6.0.3
+        uses: 'actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0' # v7.0.0
 
       - name: 'Create working directories'
         run: 'mkdir -p "$PKG_DIR_PACKAGED"'
