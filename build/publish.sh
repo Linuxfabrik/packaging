@@ -5,14 +5,24 @@
 #          https://www.linuxfabrik.ch/
 # License: The Unlicense, see LICENSE file.
 #
-# Publish the built packages to the Linuxfabrik package repository, where they
-# are served under repo.linuxfabrik.ch/<PKG_REPO_SUBDIR>/.
+# Publish the built packages to the Linuxfabrik package repository, served under
+# repo.linuxfabrik.ch.
 #
-# Not implemented yet. This step uploads the built packages from PKG_DIR_PACKAGED
-# to the repository and refreshes the per-format repository metadata:
-#   - RPM (EL/Fedora):    createrepo_c + gpg-signed repodata
-#   - DEB (Debian/Ubuntu): reprepro/aptly + signed Release
-#   - pacman (Arch):       repo-add + pacman-key signature
+# Not implemented yet, and intentionally deferred: publishing targets a Pulp server
+# that is not deployed yet. publish.sh uploads the built packages into the aggregated
+# Linuxfabrik Pulp repositories and triggers a publication; Pulp signs the metadata
+# itself via its signing service (the Linuxfabrik GPG key), so nothing is signed here.
+# Do NOT wire the legacy createrepo/freight publishing path -- it is being retired.
+#
+# Intended flow per distro family:
+#   RPM (el/<ver>):       pulp rpm content upload --repository=<repo> --file=<rpm>
+#                         pulp rpm publication create --repository=<repo>
+#   DEB (debian, ubuntu): pulp deb content upload --repository=<repo> --file=<deb>
+#                         pulp deb publication create --repository=<repo>
+# Channels release/testing map to the target repository/distribution. Distributions
+# are created with --repository, so the newest publication is served immediately.
+# Arch/pacman has no Pulp plugin and no repository in the layout -- an open question.
+# See CONTRIBUTING.md "Publishing to Pulp".
 #
 # Required environment (planned):
 #   PKG_NAME, PKG_VERSION, PKG_REPO_SUBDIR

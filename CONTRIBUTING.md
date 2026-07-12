@@ -247,18 +247,43 @@ package, installing the base alone never pulls it. FirewallFabrik is the first s
 - **Version detection**: a scheduled workflow compares each `package.conf`
   `PKG_VERSION` against the latest upstream release and proposes a bump when the
   upstream is ahead. Merging the bump triggers a build.
-- **Publish**: `build/publish.sh` hands the built packages to the repo server,
-  which serves them under `repo.linuxfabrik.ch/<PKG_REPO_SUBDIR>/`.
+- **Publish**: `build/publish.sh` uploads the built packages into the Linuxfabrik
+  Pulp repositories, served under `repo.linuxfabrik.ch`.
 - **Release trigger (first-party)**: a Linuxfabrik product's own release workflow
   fires a `repository_dispatch` to this repository with the package name and
   version, which runs the matrix build and publish. The scheduled version-detection
   workflow acts as a delayed safety net.
 
-`build/publish.sh` is currently a stub. Repo-side publishing to `repo.linuxfabrik.ch`
-still has to be built: upload to the repo server, `createrepo_c` +
-GPG-signed repodata for the EL/Fedora trees, `reprepro`/`aptly` + signed `Release` for
-the Debian/Ubuntu suites, `repo-add` + `pacman-key` signing for the Arch tree, and
-shipping the client repo definitions. Package signing keys still need provisioning.
+### Publishing to Pulp
+
+Publishing targets a [Pulp](https://pulpproject.org/) server. `build/publish.sh`
+uploads each built package into the matching Linuxfabrik repository and triggers a new
+publication:
+
+- RPM: `pulp rpm content upload --repository=<repo> --file=<rpm>`, then `pulp rpm
+  publication create --repository=<repo>`.
+- DEB: `pulp deb content upload --repository=<repo> --file=<deb>`, then `pulp deb
+  publication create --repository=<repo>`.
+
+Distributions are created with `--repository`, so the newest publication is served
+immediately. **Pulp signs the repository metadata itself** through its signing service
+(the Linuxfabrik GPG key); no package or metadata signing happens in CI, and
+`repo_gpgcheck=1` is enforced on clients.
+
+Repository layout: one aggregated Linuxfabrik repository per distribution -- EL
+(`el/<version>/<arch>/`, one per EL major, covering Rocky/Alma/RHEL/CentOS via the
+client's `$releasever`/`$basearch`), Debian and Ubuntu (`<debian|ubuntu>/` with
+`dists/<codename>-<channel>/main`), and SLES (`sles/<version>/<arch>/`, own packages
+only). Two channels: `release` and `testing`.
+
+`build/publish.sh` is currently a stub, deferred on purpose: the Pulp server is not
+deployed yet, and the target repositories and signing service are provisioned as part
+of that rollout. The earlier per-package `createrepo`/`freight` publishing is being
+retired and must not be wired here.
+
+**Arch/pacman has no home in this model.** Pulp ships `pulp_rpm`, `pulp_deb` and
+`pulp_file` but no pacman plugin (verified against the Pulp source), so pacman packages
+can be built but currently have no distribution channel. This is an open question.
 
 
 ## Code style
