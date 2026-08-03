@@ -20,10 +20,3 @@ repos:
         # Linuxfabrik repositories; do not append a trailing newline.
         exclude: '^LICENSE$'
       - id: 'trailing-whitespace'
-
-  - repo: 'https://github.com/astral-sh/ruff-pre-commit'
-    rev: 'v0.16.1'
-    hooks:
-      - id: 'ruff-check'
-        args: ['--fix']
-      - id: 'ruff-format'
