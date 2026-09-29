@@ -71,7 +71,7 @@ jobs:
                 --base 'main' \
                 --head "$branch" \
                 --title "build($name): bump to $latest" \
-                --body "Upstream released \`$latest\` (packaged: \`$current\`). Merging this triggers a build and publish of \`$name\` $latest."
+                --body "Upstream released \`$latest\` (packaged: \`$current\`). Merging this only updates the manifest. Build \`$name\` $latest afterwards with \`gh workflow run lf-build-linux-x86_64.yml --field package=$name\`."
 
               git checkout main
             fi

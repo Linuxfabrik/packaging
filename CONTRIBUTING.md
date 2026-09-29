@@ -269,7 +269,8 @@ package, installing the base alone never pulls it. FirewallFabrik is the first s
   workflow (`workflow_call`).
 - **Version detection**: a scheduled workflow compares each `package.conf`
   `PKG_VERSION` against the latest upstream release and proposes a bump when the
-  upstream is ahead. Merging the bump triggers a build.
+  upstream is ahead. Merging the bump only updates the manifest; the build is
+  started by hand afterwards.
 - **Publish**: `build/publish.sh` uploads the built packages into the Linuxfabrik
   Pulp repositories, served under `repo.linuxfabrik.ch`.
 - **Release trigger (first-party)**: a Linuxfabrik product's own release workflow
