@@ -45,6 +45,12 @@ $PKG_NAME ($PKG_VERSION-$PKG_PACKAGE_ITERATION) unstable; urgency=medium
  -- Linuxfabrik GmbH <info@linuxfabrik.ch>  $(date --rfc-email)
 EOF
 
+echo "✅ Install build dependencies"
+# the Build-Depends of debian/control, as create-rpm.sh does with the spec; the
+# container images drop the apt lists, so they are fetched first
+apt-get update
+DEBIAN_FRONTEND=noninteractive apt-get build-dep --no-install-recommends --yes "$src"
+
 echo "✅ Create deb"
 pushd "$src"
 debuild --build=binary --no-sign
