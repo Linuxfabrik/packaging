@@ -271,18 +271,20 @@ package, installing the base alone never pulls it. FirewallFabrik is the first s
   `PKG_VERSION` against the latest upstream release and proposes a bump when the
   upstream is ahead. Merging the bump only updates the manifest; the build is
   started by hand afterwards.
-- **Publish**: `build/publish.sh` uploads the built packages into the Linuxfabrik
-  Pulp repositories, served under `repo.linuxfabrik.ch`.
-- **Release trigger (first-party)**: a Linuxfabrik product's own release workflow
-  fires a `repository_dispatch` to this repository with the package name and
-  version, which runs the matrix build and publish. The scheduled version-detection
-  workflow acts as a delayed safety net.
+- **Publish**: not implemented yet. `build/publish.sh` is meant to upload the built
+  packages into the Linuxfabrik Pulp repositories, served under `repo.linuxfabrik.ch`,
+  but the Pulp server it targets is not deployed, so the script stops with an error.
+  Until then, a build ends with its artifacts.
+- **Release trigger (first-party)**: planned, not implemented. A Linuxfabrik product's
+  own release workflow is meant to fire a `repository_dispatch` to this repository
+  with the package name and version, which would run the matrix build and publish. No
+  workflow here listens for `repository_dispatch` yet.
 
 ### Publishing to Pulp
 
-Publishing targets a [Pulp](https://pulpproject.org/) server. `build/publish.sh`
-uploads each built package into the matching Linuxfabrik repository and triggers a new
-publication:
+The intended flow, not implemented yet: publishing targets a
+[Pulp](https://pulpproject.org/) server. `build/publish.sh` uploads each built package
+into the matching Linuxfabrik repository and triggers a new publication:
 
 - RPM: `pulp rpm content upload --repository=<repo> --file=<rpm>`, then `pulp rpm
   publication create --repository=<repo>`.
