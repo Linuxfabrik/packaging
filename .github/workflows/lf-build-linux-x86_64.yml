@@ -39,7 +39,7 @@ jobs:
       distro_list: '${{ steps.set-matrix.outputs.distro_list }}'
     steps:
       - name: 'Harden the runner (Audit all outbound calls)'
-        uses: 'step-security/harden-runner@351661ca32ac09a36dc5ee2d536e3128f2a3c8ed' # v2.22.0
+        uses: 'step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25' # v2.22.1
         with:
           egress-policy: 'audit'
 
@@ -72,7 +72,7 @@ jobs:
         distro: '${{ fromJson(needs.prepare-matrix.outputs.distro_list) }}'
     steps:
       - name: 'Harden the runner (Audit all outbound calls)'
-        uses: 'step-security/harden-runner@351661ca32ac09a36dc5ee2d536e3128f2a3c8ed' # v2.22.0
+        uses: 'step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25' # v2.22.1
         with:
           egress-policy: 'audit'
 
@@ -96,7 +96,7 @@ jobs:
         run: '/bin/bash "$PKG_DIR_REPO/build/matrix-package.sh"'
 
       - name: 'Upload the packages (rpm, deb)'
-        uses: 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a' # v7.0.1
+        uses: 'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9' # v7.0.2
         with:
           compression-level: 8
           path: '${{ env.PKG_DIR_PACKAGED }}/*'
