@@ -59,6 +59,16 @@ if [ -d "$PKG_DIR_PACKAGE/files" ]; then
 fi
 cp "$SPEC" "$HOME/rpmbuild/SPECS/"
 SPEC="$HOME/rpmbuild/SPECS/$(basename "$SPEC")"
+# Write the %changelog for the version being built, as create-deb.sh does with
+# debian/changelog. A fixed entry in the spec would name an older version than
+# the package (rpmlint: incoherent-version-in-changelog). The entry carries the
+# dist tag, since rpmlint only strips the ones it knows, not .sle16.
+sed --in-place '/^%changelog/,$d' "$SPEC"
+cat <<EOF >> "$SPEC"
+%changelog
+* $(LC_ALL=C date '+%a %b %d %Y') Linuxfabrik GmbH <info@linuxfabrik.ch> - $PKG_VERSION-$PKG_PACKAGE_ITERATION$(rpm --eval '%{?dist}')
+- v$PKG_VERSION release.
+EOF
 
 # Install the statically declared BuildRequires. This is per-package and needs
 # no changes to the container images.

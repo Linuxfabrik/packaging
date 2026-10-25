@@ -19,4 +19,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * One signed repository per distribution for all Linuxfabrik packages on repo.linuxfabrik.ch, with signed metadata for `repo_gpgcheck=1`.
 * Packages with compiled parts can be built for aarch64 (arm64) as well, natively on arm64 build machines.
 
+### Changed
+
+* `linuxfabrik-release`: if repo.linuxfabrik.ch cannot be reached, dnf skips the Linuxfabrik repositories with a warning instead of failing.
+
+### Fixed
+
+* RPM packages carry a changelog entry for their own version instead of a fixed one.
+
 [Unreleased]: https://github.com/Linuxfabrik/packaging/commits/main
