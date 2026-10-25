@@ -175,17 +175,31 @@ through FPM flags.
 ## The manifest (`package.conf`)
 
 ```bash
-PKG_VERSION='4.5.4'                 # upstream release tag we package (without leading v)
-PKG_GITHUB_USER='nicolargo'
-PKG_GITHUB_REPO='glances'
+PKG_VERSION='4.5.8'                 # upstream version we package (tag without prefix)
+PKG_UPSTREAM_TYPE='github'          # github | gitlab | none
+PKG_UPSTREAM_PROJECT='nicolargo/glances'
 PKG_SOURCE_TARBALL="glances-${PKG_VERSION}.tar.gz"
-PKG_SOURCE_URL="https://github.com/${PKG_GITHUB_USER}/${PKG_GITHUB_REPO}/archive/v${PKG_VERSION}/${PKG_SOURCE_TARBALL}"
+PKG_SOURCE_URL="https://github.com/${PKG_UPSTREAM_PROJECT}/archive/v${PKG_VERSION}/${PKG_SOURCE_TARBALL}"
 PKG_RPM_SPEC='rpm/glances.spec'
 PKG_RPM_DISTROS='rocky-v10 fedora-v44'   # EL and Fedora targets
 PKG_DEB_DEBIAN_DIR='deb/debian'
 PKG_DEB_DISTROS='debian-v13 ubuntu-v2404'
 PKG_SMOKE_TEST='glances --version'  # run as nobody after installing into a fresh container
 ```
+
+`build/check-upstream.sh` watches the upstream for new versions. Besides
+`PKG_UPSTREAM_TYPE` and `PKG_UPSTREAM_PROJECT` it reads, all optional:
+
+- `PKG_UPSTREAM_SOURCE`: `releases` (default) takes the release the upstream marks as
+  latest; drafts and prereleases never count. `tags` takes the highest version among
+  all tags and skips alpha, beta, dev, pre and rc tags. Use it for projects that tag
+  without publishing releases.
+- `PKG_UPSTREAM_TAG_PREFIX`: stripped from the tag to get the version, default `v`.
+  duplicity, for example, tags `rel.3.2.2`.
+- `PKG_UPSTREAM_URL`: the GitLab instance, default `https://gitlab.com`.
+
+`PKG_UPSTREAM_TYPE='none'` is for packages without an upstream, such as
+`linuxfabrik-release`; they are rebuilt by changing their package directory.
 
 The spec uses `%{pkg_version}` / `%{pkg_release}`, injected by `create-rpm.sh`,
 so the version lives only in the manifest. The build iteration is not part of the
@@ -275,8 +289,10 @@ Every release of a packaged project ends up on repo.linuxfabrik.ch without a man
 step, first in the `testing` channel and seven days later in `release`:
 
 1. **Version detection**: `lf-check-upstream.yml` runs hourly and compares each
-   `PKG_VERSION` with the latest upstream GitHub release. When the upstream is ahead,
-   it opens a bump pull request. Linuxfabrik's own projects do not have to wait for
+   `PKG_VERSION` with the latest upstream version. When the upstream is ahead,
+   it opens a bump pull request. Upstreams on GitHub and GitLab are supported, by
+   release or by tag (see `PKG_UPSTREAM_SOURCE`). An upstream that cannot be
+   queried fails the run. Linuxfabrik's own projects do not have to wait for
    the next run: their release workflow sends a `repository_dispatch` of type
    `upstream-release` to this repository.
 2. **Build and smoke test**: `lf-build-pr.yml` builds every package a pull request

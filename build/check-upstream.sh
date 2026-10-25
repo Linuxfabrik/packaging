@@ -6,18 +6,33 @@
 # License: The Unlicense, see LICENSE file.
 #
 # Detect whether a package is behind its upstream. Reads PKG_VERSION and the
-# upstream coordinates from the package's package.conf, queries the latest
-# upstream GitHub release and compares the two versions.
+# upstream coordinates from the package's package.conf, determines the latest
+# upstream version and compares the two.
 #
-# Usage: check-upstream.sh <package-dir>
+# Usage: check-upstream.sh [--write] <package-dir>
 #
 # Prints "<current> <latest>" and exits:
 #   0  upstream is newer (a bump is due)
-#   1  already up to date
-#   2  error (e.g. could not determine the latest upstream version)
+#   1  already up to date, or the package has no upstream to watch
+#   2  error (e.g. the upstream could not be queried, or its latest tag does not
+#      look like a version)
 #
 # With --write it also rewrites PKG_VERSION in package.conf to the latest version.
-# Honors GITHUB_TOKEN (sent as a bearer token) to avoid API rate limits.
+#
+# Upstream coordinates in package.conf:
+#   PKG_UPSTREAM_TYPE        github | gitlab | none
+#   PKG_UPSTREAM_PROJECT     e.g. nicolargo/glances, or group/subgroup/project
+#   PKG_UPSTREAM_SOURCE      releases (default) | tags
+#   PKG_UPSTREAM_TAG_PREFIX  stripped from the tag to get the version, default v
+#   PKG_UPSTREAM_URL         GitLab instance, default https://gitlab.com
+#
+# `releases` takes the release the upstream marks as latest; drafts and
+# prereleases never count. `tags` takes the highest version among all tags that
+# start with the prefix, skipping alpha, beta, dev, pre and rc tags. Use it for
+# projects that tag without publishing releases.
+#
+# Honors GITHUB_TOKEN and GITLAB_TOKEN to avoid API rate limits and to read
+# private GitLab projects (releases only; tags are read with `git ls-remote`).
 
 set -e -o pipefail -u
 
@@ -26,26 +41,98 @@ if [ "${1:-}" = '--write' ]; then
     write=true
     shift
 fi
-
 dir="$1"
 conf="$dir/package.conf"
 
 # shellcheck source=/dev/null
 source "$conf"
 
-auth=()
-if [ -n "${GITHUB_TOKEN:-}" ]; then
-    auth=(--header "Authorization: Bearer $GITHUB_TOKEN")
-fi
+PKG_UPSTREAM_SOURCE="${PKG_UPSTREAM_SOURCE:-releases}"
+PKG_UPSTREAM_TAG_PREFIX="${PKG_UPSTREAM_TAG_PREFIX-v}"
+PKG_UPSTREAM_URL="${PKG_UPSTREAM_URL:-https://gitlab.com}"
 
-api="https://api.github.com/repos/$PKG_GITHUB_USER/$PKG_GITHUB_REPO/releases/latest"
-latest="$(curl --fail --silent --show-error --location "${auth[@]}" "$api" \
-    | sed --quiet 's/.*"tag_name": *"\([^"]*\)".*/\1/p' \
-    | sed 's/^v//')"
+die() {
+    echo "$dir: $*" >&2
+    exit 2
+}
+
+# Print the tag of the release the upstream marks as latest.
+latest_release_tag() {
+    local api auth=() json
+    case "$PKG_UPSTREAM_TYPE" in
+    github)
+        api="https://api.github.com/repos/$PKG_UPSTREAM_PROJECT/releases/latest"
+        if [ -n "${GITHUB_TOKEN:-}" ]; then
+            auth=(--header "Authorization: Bearer $GITHUB_TOKEN")
+        fi
+        ;;
+    gitlab)
+        # The project path goes into the URL encoded, slashes included.
+        api="$PKG_UPSTREAM_URL/api/v4/projects/${PKG_UPSTREAM_PROJECT//\//%2F}/releases/permalink/latest"
+        if [ -n "${GITLAB_TOKEN:-}" ]; then
+            auth=(--header "PRIVATE-TOKEN: $GITLAB_TOKEN")
+        fi
+        ;;
+    esac
+    json="$(curl --fail --silent --show-error --location "${auth[@]}" "$api")" \
+        || die "could not query $api (does the project publish releases? if it only tags, set PKG_UPSTREAM_SOURCE='tags')"
+    jq --exit-status --raw-output '.tag_name' <<< "$json" \
+        || die "no tag_name in the answer of $api"
+}
+
+# Print the highest version among all tags carrying the prefix.
+latest_tag_version() {
+    local repo_url
+    case "$PKG_UPSTREAM_TYPE" in
+    github) repo_url="https://github.com/$PKG_UPSTREAM_PROJECT.git" ;;
+    gitlab) repo_url="$PKG_UPSTREAM_URL/$PKG_UPSTREAM_PROJECT.git" ;;
+    esac
+    local refs ref tag
+    # Anonymous on purpose: a private or mistyped project fails right away
+    # instead of prompting, and no credential helper or askpass program is asked
+    # for stored credentials.
+    refs="$(GIT_ASKPASS='' GIT_TERMINAL_PROMPT=0 SSH_ASKPASS='' \
+        git -c core.askPass='' -c credential.helper='' \
+        ls-remote --refs --tags "$repo_url")" \
+        || die "could not list the tags of $repo_url"
+    # The prefix is compared literally, not as a regex (duplicity uses "rel.").
+    while read -r _ ref; do
+        tag="${ref#refs/tags/}"
+        if [[ "$tag" == "$PKG_UPSTREAM_TAG_PREFIX"* ]]; then
+            echo "${tag#"$PKG_UPSTREAM_TAG_PREFIX"}"
+        fi
+    done <<< "$refs" \
+        | { grep --extended-regexp '^[0-9]+(\.[0-9]+)*([-+._][0-9A-Za-z.]+)?$' || true; } \
+        | { grep --extended-regexp --ignore-case --invert-match '(alpha|beta|dev|pre|rc)' || true; } \
+        | sort --version-sort \
+        | tail -1
+}
+
+case "${PKG_UPSTREAM_TYPE:-}" in
+github | gitlab) ;;
+none)
+    echo "$dir: no upstream to watch (PKG_UPSTREAM_TYPE='none')" >&2
+    exit 1
+    ;;
+*) die "PKG_UPSTREAM_TYPE must be github, gitlab or none, not '${PKG_UPSTREAM_TYPE:-}'" ;;
+esac
+
+case "$PKG_UPSTREAM_SOURCE" in
+releases)
+    tag="$(latest_release_tag)"
+    if [[ "$tag" != "$PKG_UPSTREAM_TAG_PREFIX"* ]]; then
+        die "latest release tag '$tag' does not start with PKG_UPSTREAM_TAG_PREFIX='$PKG_UPSTREAM_TAG_PREFIX'"
+    fi
+    latest="${tag#"$PKG_UPSTREAM_TAG_PREFIX"}"
+    ;;
+tags)
+    latest="$(latest_tag_version)"
+    ;;
+*) die "PKG_UPSTREAM_SOURCE must be releases or tags, not '$PKG_UPSTREAM_SOURCE'" ;;
+esac
 
 if [ -z "$latest" ]; then
-    echo "Could not determine latest upstream version for $PKG_GITHUB_USER/$PKG_GITHUB_REPO" >&2
-    exit 2
+    die "found no upstream version"
 fi
 
 echo "$PKG_VERSION $latest"
@@ -63,5 +150,4 @@ fi
 if [ "$write" = true ]; then
     sed --in-place "s/^PKG_VERSION=.*/PKG_VERSION='$latest'/" "$conf"
 fi
-
 exit 0
