@@ -177,13 +177,14 @@ same.
 
 ### Architectures
 
-`PKG_ARCHES` in `package.conf` lists the architectures a package is built for, `x86_64` (the
-default) and `aarch64`. A noarch package (`BuildArch: noarch`, `Architecture: all`) is built
-once, on `x86_64`, and published for both: the repository server copies noarch RPMs into every
-arch directory, and apt picks `Architecture: all` up on `amd64` and `arm64`. Building it on
-both would produce two files with the same name, which the release job refuses. Only a
-package with compiled parts, such as a Go binary or Python wheels with C extensions, sets
-`PKG_ARCHES='x86_64 aarch64'`.
+`PKG_ARCHES` in `package.conf` lists the architectures a package is built for, by default
+`aarch64 x86_64`. Every package is built and smoke-tested on both, so a dependency that is
+missing on aarch64 shows up before the release, noarch packages included. A noarch package
+(`BuildArch: noarch`, `Architecture: all`) is published once: the release job keeps the first
+of the identical file names, the repository server copies noarch RPMs into every arch
+directory, and apt picks `Architecture: all` up on `amd64` and `arm64`. For any other file
+name, two builds with the same name fail the release. A package that cannot be built for one
+architecture sets `PKG_ARCHES='x86_64'`.
 
 aarch64 builds run natively on GitHub's `ubuntu-24.04-arm` runners. Locally,
 `matrix-package.sh` passes the architecture to podman (`--arch`), so on an x86_64 workstation
@@ -215,7 +216,7 @@ PKG_RPM_DISTROS='rocky-v10 fedora-v44'   # EL and Fedora targets
 PKG_DEB_DEBIAN_DIR='deb/debian'
 PKG_DEB_DISTROS='debian-v13 ubuntu-v2404'
 PKG_SMOKE_TEST='glances --version'  # run as nobody after installing into a fresh container
-# PKG_ARCHES='x86_64 aarch64'       # only for packages with compiled parts, default x86_64
+# PKG_ARCHES='x86_64'               # default 'aarch64 x86_64'
 ```
 
 `build/check-upstream.sh` watches the upstream for new versions. Besides

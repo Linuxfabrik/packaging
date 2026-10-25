@@ -66,7 +66,7 @@ jobs:
           fi
 
           # releases: one per package. builds: one per package and architecture
-          # (PKG_ARCHES, default x86_64); the release job collects all
+          # (PKG_ARCHES, default aarch64 and x86_64); the release job collects all
           # architectures of a package into its one release.
           builds='[]'
           releases='[]'
@@ -74,7 +74,7 @@ jobs:
             # shellcheck source=/dev/null
             version="$(source "packages/$name/package.conf" && echo "$PKG_VERSION")"
             # shellcheck source=/dev/null
-            arches="$(source "packages/$name/package.conf" && echo "${PKG_ARCHES:-x86_64}")"
+            arches="$(source "packages/$name/package.conf" && echo "${PKG_ARCHES:-aarch64 x86_64}")"
             last="$(git tag --list "$name-$version-*" \
                 | sed "s/^$name-$version-//" \
                 | grep --extended-regexp '^[0-9]+$' \
@@ -162,7 +162,13 @@ jobs:
             while IFS= read -r -d '' file; do
               name="$(basename "$file")"
               if [ -e "$ASSETS/$name" ]; then
-                # also hits a noarch package built for two architectures
+                # A noarch package is built and smoke-tested on every
+                # architecture, but published once: the repository server puts
+                # it into every arch directory, and apt takes `all` for amd64
+                # and arm64 alike.
+                if [[ "$name" == *.noarch.rpm || "$name" == *_all.deb ]]; then
+                  continue
+                fi
                 echo "Two builds produced the same file name: $name" >&2
                 exit 1
               fi
