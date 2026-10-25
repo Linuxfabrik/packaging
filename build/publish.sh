@@ -403,6 +403,14 @@ render_distro() {
 render_index() {
     local page="$PUBLISH_WEBROOT/index.html" tmp dir os version arch dist codename
     local fingerprint
+    # style.css shows code as blocks, which breaks sentences apart. The override
+    # is a file of its own, because the proxy in front of this server only
+    # allows same-origin stylesheets (CSP style-src 'self'), no inline <style>.
+    tmp="$(mktemp "$PUBLISH_WEBROOT/.index.css.XXXXXX")"
+    echo 'p code { display: inline; }' > "$tmp"
+    chmod 0644 "$tmp"
+    mv "$tmp" "$PUBLISH_WEBROOT/index.css"
+
     tmp="$(mktemp "$PUBLISH_WEBROOT/.index.html.XXXXXX")"
     fingerprint="$(sed -E 's/(.{4})/\1 /g; s/ $//' <<< "$PUBLISH_GPG_KEY")"
 
@@ -415,8 +423,7 @@ render_index() {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Linuxfabrik Package Repository</title>
 <link rel="stylesheet" href="/assets/style.css" type="text/css">
-<!-- style.css shows code as blocks, which breaks sentences apart -->
-<style>p code { display: inline; }</style>
+<link rel="stylesheet" href="/index.css" type="text/css">
 </head>
 <body>
 <div id="header">
@@ -497,6 +504,8 @@ publishes the package. Details:
 all builds: <a href="https://github.com/$PUBLISH_GITHUB_REPO/releases">GitHub releases</a>.</p>
 
 <h2>Other repositories on this server</h2>
+<p>These repositories are not covered by <code>linuxfabrik-release</code> and have their
+own setup.</p>
 <ul>
 <li><a href="/monitoring-plugins/">monitoring-plugins/</a>: the
 <a href="https://github.com/Linuxfabrik/monitoring-plugins">Linuxfabrik Monitoring Plugins</a>,

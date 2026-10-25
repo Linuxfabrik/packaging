@@ -387,7 +387,8 @@ pre-commit, CodeQL, Scorecard, dependency review) keep their common names.
    newest build in `release`. At the end of every run it renders the start page
    `index.html` from the published contents: setup command and packages per distro
    (release and testing), channels, signing key. It reuses the server's
-   `/assets/style.css` and logo.
+   `/assets/style.css` and logo, and writes its own overrides to `index.css`
+   instead of an inline `<style>`, which the CSP of the proxy in front blocks.
 
 The signing key never leaves the repository server: CI only ever handles unsigned
 packages, and the server pulls instead of GitHub pushing to it. The GitHub releases
