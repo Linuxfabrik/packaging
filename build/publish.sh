@@ -68,11 +68,9 @@ repo_target() {
     # sle, not sles: the same repository serves SLES, SLED and openSUSE Leap
     # (verified with Leap 15.5 and 16.0), as repo.linuxfabrik.ch/monitoring-plugins/sle/ does
     sles-v*) echo "sle/${1#sles-v}" ;;
-    debian-v11) echo 'debian bullseye' ;;
     debian-v12) echo 'debian bookworm' ;;
     debian-v13) echo 'debian trixie' ;;
     debian-v14) echo 'debian forky' ;;
-    ubuntu-v2004) echo 'ubuntu focal' ;;
     ubuntu-v2204) echo 'ubuntu jammy' ;;
     ubuntu-v2404) echo 'ubuntu noble' ;;
     ubuntu-v2604) echo 'ubuntu resolute' ;;
