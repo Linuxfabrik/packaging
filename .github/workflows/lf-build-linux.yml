@@ -1,32 +1,48 @@
-name: 'Linuxfabrik: 21a - Build Linux (x86_64)'
+name: 'Linuxfabrik: 21 - Build Linux'
+
+# Builds one package for one architecture across its target distros, one matrix
+# job per distro, each with a smoke test. x86_64 runs on ubuntu-24.04, aarch64
+# natively on GitHub's ubuntu-24.04-arm runners.
 
 on:
   workflow_dispatch:
     inputs:
+      arch:
+        description: 'Architecture to build for.'
+        required: true
+        type: 'choice'
+        default: 'x86_64'
+        options:
+          - 'aarch64'
+          - 'x86_64'
       package:
         description: 'Name of the package to build, matching a directory under `packages/` (e.g. `glances`).'
         required: true
-      target-distros:
-        description: 'Space-separated list of distros to build on. Supported: `debian-v12 debian-v13 fedora-v44 rocky-v8 rocky-v9 rocky-v10 sles-v15 sles-v16 ubuntu-v2204 ubuntu-v2404 ubuntu-v2604`. Leave empty to use the package`s configured defaults.'
-        required: false
-        default: ''
       package-iteration:
         description: 'Build iteration of this version. Always `1` on the first build of a version; increment only when re-building the same upstream version.'
         required: true
         default: '1'
+      target-distros:
+        description: 'Space-separated list of distros to build on. Supported: `debian-v12 debian-v13 fedora-v44 rocky-v8 rocky-v9 rocky-v10 sles-v15 sles-v16 ubuntu-v2204 ubuntu-v2404 ubuntu-v2604`. Leave empty to use the package`s configured defaults.'
+        required: false
+        default: ''
   workflow_call:
     inputs:
+      arch:
+        required: false
+        type: 'string'
+        default: 'x86_64'
       package:
         required: true
         type: 'string'
-      target-distros:
-        required: false
-        type: 'string'
-        default: ''
       package-iteration:
         required: false
         type: 'string'
         default: '1'
+      target-distros:
+        required: false
+        type: 'string'
+        default: ''
 
 permissions:
   contents: 'read'
@@ -63,10 +79,11 @@ jobs:
           echo "Computed JSON array: $json_array"
           echo "distro_list=$json_array" >> "$GITHUB_OUTPUT"
 
-  build-linux-x86_64:
+  build-linux:
+    name: 'build-linux (${{ inputs.arch }}, ${{ matrix.distro }})'
     needs: 'prepare-matrix'
-    runs-on:
-      - 'ubuntu-24.04'
+    # aarch64 builds natively on GitHub's arm64 runners, no emulation.
+    runs-on: "${{ inputs.arch == 'aarch64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}"
     # A build plus smoke test takes a few minutes. Without a limit, a stalled
     # package mirror keeps the job for GitHub's 6 hours, and since lf-release.yml
     # runs one release at a time, every later release waits as well (seen with
@@ -87,7 +104,7 @@ jobs:
       - name: 'Set environment variables for the build scripts'
         run: |
           echo "PKG_NAME=${{ inputs.package }}" >> "$GITHUB_ENV"
-          echo "PKG_ARCH=x86_64" >> "$GITHUB_ENV"
+          echo "PKG_ARCH=${{ inputs.arch }}" >> "$GITHUB_ENV"
           echo "PKG_PACKAGE_ITERATION=${{ inputs.package-iteration }}" >> "$GITHUB_ENV"
           # One distro per matrix job, to parallelize and avoid GitHub`s 6h timeout.
           echo "PKG_TARGET_DISTROS=${{ matrix.distro }}" >> "$GITHUB_ENV"
