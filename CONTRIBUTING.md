@@ -137,16 +137,21 @@ A *package* is one piece of software we ship, living under `packages/<name>/`.
 Each package brings:
 
 - `package.conf`: the manifest, sourced by the build scripts. It declares the
-  source, the version to package and the per-format target distributions.
+  source, the version to package, the per-format target distributions and the
+  smoke test.
 - `rpm/<name>.spec`: the RPM recipe (EL, Fedora, SLES).
 - `deb/debian/`: the DEB recipe (`control`, `rules`, `copyright`, `source/format`).
 - `files/`: assets shared between the formats, e.g. the systemd unit.
+- `src/`: the source itself, only for packages without an upstream, such as
+  `linuxfabrik-release` (`PKG_SOURCE_DIR`).
 
 A package only ships the recipes for the formats it targets. The build is
 package-agnostic: `build/create-package.sh` reads the manifest, fetches the
-source and dispatches to `create-rpm.sh` or `create-deb.sh` depending on the
-target distro. `matrix-package.sh` runs that across many distros,
-each inside the matching container from `build/containerfiles/`.
+source (or packs `src/`) and dispatches to `create-rpm.sh` or `create-deb.sh`
+depending on the target distro. `matrix-package.sh` runs that across many
+distros, each inside the matching container from `build/containerfiles/`, and
+then installs every result into a fresh container of its distro to run the
+smoke test (`build/smoke-test-package.sh`).
 
 
 ## Package formats
@@ -158,6 +163,17 @@ package only targets the formats and distros it needs:
   `centos-*`), `fedora-*` and `sles-*`. Built with `rpmbuild`; build dependencies are resolved
   with `dnf builddep` on EL/Fedora and with a zypper fallback on SLES.
 - **DEB** (`PKG_DEB_DEBIAN_DIR`, `PKG_DEB_DISTROS`): `debian-*`, `ubuntu-*`. Built with `debuild`.
+
+Targets are the distributions in their regular, freely available support: RHEL 8, 9 and 10 and
+compatibles (`rocky-v8`, `rocky-v9`, `rocky-v10`), Fedora (`fedora-v44`), SLES 15 and 16
+(`sles-v15`, `sles-v16`, also serving openSUSE Leap), Debian 12 and 13 (`debian-v12`,
+`debian-v13`) and Ubuntu 22.04, 24.04 and 26.04 (`ubuntu-v2204`, `ubuntu-v2404`,
+`ubuntu-v2604`). A release that leaves regular support is no target any more, and its
+containerfile goes with it; paid extended support (Debian ELTS, Ubuntu ESM) does not count.
+
+On EL, a package may depend on EPEL and the CRB repository, as glances does. The build
+containers and the smoke test enable both, and the README tells administrators to do the
+same.
 
 
 ## Why native recipes, not FPM
@@ -225,8 +241,8 @@ lets the distribution own the interpreter and the dependency stack.
 We build one package file per distro and version, never a single universal artifact: RPMs carry
 the distribution's `%{?dist}` tag (`...-1.el10.noarch.rpm`, `...-1.fc44.noarch.rpm`) and DEBs are
 built per suite. SLES defines no `%{dist}`; `create-rpm.sh` sets `.sle15` / `.sle16` there, so
-the builds for both releases do not share a file name. Each distro+version is published into its own repository tree, because dependency
-names and versions differ per release.
+the builds for both releases do not share a file name. Each distro+version is published into
+its own repository tree, because dependency names and versions differ per release.
 
 A product can therefore only target distributions that ship a recent enough interpreter and
 dependency versions. Verify this per product, in a container, before declaring a target. Two
@@ -271,7 +287,8 @@ package, installing the base alone never pulls it. FirewallFabrik is the first s
 
 ## Adding a package
 
-1. Create `packages/<name>/` with the manifest and the recipes you need (`rpm/`, `deb/`).
+1. Create `packages/<name>/` with the manifest and the recipes you need (`rpm/`, `deb/`), plus
+   `files/` for shared assets, or `src/` if the package has no upstream.
 2. Pick the smallest set of `PKG_RPM_DISTROS` / `PKG_DEB_DISTROS` that the package actually
    needs. Not every package targets every distro or format.
 3. Set `PKG_SMOKE_TEST` to a command that proves the installed package works, e.g.
@@ -286,6 +303,23 @@ package, installing the base alone never pulls it. FirewallFabrik is the first s
    ```
 
 5. Open a pull request. Merging it publishes the package to the `testing` channel.
+
+### Testing beyond the smoke test
+
+The smoke test proves that a package installs and starts on a fresh container of its distro.
+Changes that affect how hosts reach the repository need more: the repository configuration in
+`linuxfabrik-release`, `build/publish.sh`, the repository layout, or a new target distro. Test
+those end to end on fresh VMs of every affected distro, against a test repository server set up
+like the real one (see [The repository server](#the-repository-server)) and serving
+`repo.linuxfabrik.ch` with a test certificate:
+
+- install `linuxfabrik-release` through its bootstrap link only, refresh the package index with
+  signature checks on, and install a package from the repository
+- check that a bad signature is refused: a key that does not match the repository, and a
+  `repomd.xml.asc` that does not match its `repomd.xml`
+
+Use VMs rather than containers here, so the test runs exactly what an administrator runs on an
+installed host, from the bootstrap link to the first update.
 
 
 ## Build and publish pipeline
@@ -317,7 +351,9 @@ step, first in the `testing` channel and seven days later in `release`:
 5. **Promotion**: `lf-promote.yml` turns every prerelease that is 7 days old into a
    full release. Intervene by hand with
    `gh workflow run lf-promote.yml --field release=<tag> --field action=promote`
-   (release now) or `action=reject` (never release, remove from `testing`).
+   (release now) or `action=reject` (never release, remove from `testing`). A rejected
+   prerelease keeps its tag, with "(rejected)" appended to its title; fix the package and
+   merge again to build the next iteration.
 6. **Publish**: `build/publish.sh` runs from a systemd timer on the repository
    server. It mirrors the GitHub releases into the repositories: prerelease to
    `testing`, release to `release`, rejected prerelease out of `testing` again.
@@ -339,17 +375,44 @@ One aggregated Linuxfabrik repository per distribution, the same layout the Pulp
 server will serve later (GitLab `001/project-big-picture` #1252), so client
 configuration does not change when it takes over:
 
-- RPM: `<el|fedora|sle>/<os-version>/<arch>/linuxfabrik/<release|testing>/`. EL
-  covers Rocky, Alma, RHEL and CentOS; `linuxfabrik-release` writes the EL major
-  version at build time, because EL 8 has no `$releasever_major`, and uses
-  `$basearch` for the arch. noarch packages go into every arch directory. Packages are signed, and so is
-  `repodata/repomd.xml`, so clients can set `repo_gpgcheck=1`.
-  `sle` (not `sles`) serves SLES, SLED and openSUSE Leap alike, as the monitoring-plugins
-  repository does; the build containers keep the `sles-v*` names.
+- RPM: `<el|fedora|sle>/<os-version>/<arch>/linuxfabrik/<release|testing>/`. EL covers Rocky,
+  Alma, RHEL and CentOS; `linuxfabrik-release` writes the EL major version at build time,
+  because EL 8 has no `$releasever_major`, and uses `$basearch` for the arch. noarch packages go
+  into every arch directory. Packages are signed, and so is `repodata/repomd.xml`, so clients
+  can set `repo_gpgcheck=1`. `sle` (not `sles`) serves SLES, SLED and openSUSE Leap alike, as
+  the monitoring-plugins repository does; the build containers keep the `sles-v*` names.
 - DEB: `<debian|ubuntu>/linuxfabrik/` with `dists/<codename>-<release|testing>/main`,
   e.g. `deb [signed-by=/usr/share/keyrings/linuxfabrik.gpg] https://repo.linuxfabrik.ch/debian/linuxfabrik trixie-release main`.
   No architecture in the path, apt picks it from the `Release` file
   (`amd64 arm64`).
+
+### The repository server
+
+`build/publish.sh` is the only part that runs outside GitHub. Its header lists the details;
+in short, the server needs:
+
+- `createrepo_c`, `dpkg` (for `dpkg-deb`), freight, `gh`, `gpg`, `jq` and `rpm-sign`
+- the Linuxfabrik signing key in the GnuPG keyring of the user running the script, its
+  fingerprint in `PUBLISH_GPG_KEY` and the passphrase in the file named by
+  `PUBLISH_GPG_PASSPHRASE_FILE`, readable by that user only
+- a read-only GitHub token in `GH_TOKEN`, for the API and `gh attestation verify`
+- a web server that serves `PUBLISH_WEBROOT` and follows symbolic links (bootstrap links,
+  freight's `dists/`)
+- a systemd timer that runs the script; it locks itself against overlapping runs
+
+### linuxfabrik-release
+
+`packages/linuxfabrik-release/` holds the repository configuration as templates in `src/`
+(`linuxfabrik.repo`, `linuxfabrik.sources`) and the public signing key
+(`RPM-GPG-KEY-linuxfabrik`). The recipes fill in the placeholders at build time: `@REPO_PATH@`
+from the RPM macros of the build distro, `@OS@` and `@CODENAME@` from its `/etc/os-release`.
+Any change below the package directory builds the next iteration and reaches every host that
+has the package installed, so treat it like a change to all of them: the configuration files
+are `%config(noreplace)` / conffiles, and a host keeps its local edits.
+
+Replacing the signing key means shipping the new key in `linuxfabrik-release` first and
+signing with it only after that release has reached the hosts; otherwise they refuse the
+repository.
 
 **Arch/pacman is intentionally out of scope.** Pulp ships `pulp_rpm`, `pulp_deb` and
 `pulp_file` but no pacman plugin (verified against the Pulp source), so there is no Linuxfabrik
