@@ -1,13 +1,24 @@
 name: 'Linuxfabrik: Check upstream versions'
 
 on:
+  # Linuxfabrik's own projects send `upstream-release` from their release
+  # workflow, so their packages do not wait for the next scheduled run:
+  #   gh api repos/Linuxfabrik/packaging/dispatches --field event_type=upstream-release
+  repository_dispatch:
+    types:
+      - 'upstream-release'
   schedule:
-    # Daily at 04:00 UTC.
-    - cron: '0 4 * * *'
+    # Hourly, at minute 17.
+    - cron: '17 * * * *'
   workflow_dispatch:
 
 permissions:
   contents: 'read'
+
+# A dispatch arriving during the scheduled run would open the same bump twice.
+concurrency:
+  group: 'lf-check-upstream'
+  cancel-in-progress: false
 
 jobs:
   check-upstream:
@@ -71,7 +82,7 @@ jobs:
                 --base 'main' \
                 --head "$branch" \
                 --title "build($name): bump to $latest" \
-                --body "Upstream released \`$latest\` (packaged: \`$current\`). Merging this only updates the manifest. Build \`$name\` $latest afterwards with \`gh workflow run lf-build-linux-x86_64.yml --field package=$name\`."
+                --body "Upstream released \`$latest\` (packaged: \`$current\`). Merged automatically once it builds and passes the smoke test on all target distros. The merge publishes \`$name\` $latest to the \`testing\` channel, from where it is promoted to \`release\` after 7 days."
 
               git checkout main
             fi

@@ -184,11 +184,17 @@ PKG_RPM_SPEC='rpm/glances.spec'
 PKG_RPM_DISTROS='rocky-v10 fedora-v44'   # EL and Fedora targets
 PKG_DEB_DEBIAN_DIR='deb/debian'
 PKG_DEB_DISTROS='debian-v13 ubuntu-v2404'
-PKG_REPO_SUBDIR='glances'           # sub-directory under repo.linuxfabrik.ch
+PKG_SMOKE_TEST='glances --version'  # run as nobody after installing into a fresh container
 ```
 
 The spec uses `%{pkg_version}` / `%{pkg_release}`, injected by `create-rpm.sh`,
-so the version lives only in the manifest.
+so the version lives only in the manifest. The build iteration is not part of the
+manifest: the release workflow counts it up per version (see below).
+
+DEB versions carry the target distro after the iteration, as packages.sury.org does:
+`4.5.8-1+debian13`, `4.5.8-1+ubuntu24.04`. Without it, the builds for different
+suites share one file name, which a repository with one pool for all suites cannot
+hold. A newer distro release also sorts higher, so a dist-upgrade picks up its build.
 
 
 ## Distro-native builds
@@ -249,7 +255,10 @@ package, installing the base alone never pulls it. FirewallFabrik is the first s
 1. Create `packages/<name>/` with the manifest and the recipes you need (`rpm/`, `deb/`).
 2. Pick the smallest set of `PKG_RPM_DISTROS` / `PKG_DEB_DISTROS` that the package actually
    needs. Not every package targets every distro or format.
-3. Build locally and verify the package installs and runs:
+3. Set `PKG_SMOKE_TEST` to a command that proves the installed package works, e.g.
+   `<name> --version`.
+4. Build locally. `matrix-package.sh` installs each result into a fresh container of
+   its distro and runs the smoke test there:
 
    ```bash
    PKG_NAME=<name> PKG_TARGET_DISTROS='rocky-v10' PKG_PACKAGE_ITERATION=1 \
@@ -257,55 +266,62 @@ package, installing the base alone never pulls it. FirewallFabrik is the first s
    bash build/matrix-package.sh
    ```
 
-4. Open a pull request.
+5. Open a pull request. Merging it publishes the package to the `testing` channel.
 
 
 ## Build and publish pipeline
 
-- **Build**: the `Linuxfabrik: Build Linux (x86_64)` workflow
-  (`.github/workflows/lf-build-linux-x86_64.yml`) builds a package across its
-  configured distros, one matrix job per distro, and uploads the results as
-  artifacts. It can be triggered manually (`workflow_dispatch`) or by another
-  workflow (`workflow_call`).
-- **Version detection**: a scheduled workflow compares each `package.conf`
-  `PKG_VERSION` against the latest upstream release and proposes a bump when the
-  upstream is ahead. Merging the bump only updates the manifest; the build is
-  started by hand afterwards.
-- **Publish**: not implemented yet. `build/publish.sh` is meant to upload the built
-  packages into the Linuxfabrik Pulp repositories, served under `repo.linuxfabrik.ch`,
-  but the Pulp server it targets is not deployed, so the script stops with an error.
-  Until then, a build ends with its artifacts.
-- **Release trigger (first-party)**: planned, not implemented. A Linuxfabrik product's
-  own release workflow is meant to fire a `repository_dispatch` to this repository
-  with the package name and version, which would run the matrix build and publish. No
-  workflow here listens for `repository_dispatch` yet.
+Every release of a packaged project ends up on repo.linuxfabrik.ch without a manual
+step, first in the `testing` channel and seven days later in `release`:
 
-### Publishing to Pulp
+1. **Version detection**: `lf-check-upstream.yml` runs hourly and compares each
+   `PKG_VERSION` with the latest upstream GitHub release. When the upstream is ahead,
+   it opens a bump pull request. Linuxfabrik's own projects do not have to wait for
+   the next run: their release workflow sends a `repository_dispatch` of type
+   `upstream-release` to this repository.
+2. **Build and smoke test**: `lf-build-pr.yml` builds every package a pull request
+   touches on all its target distros (`lf-build-linux-x86_64.yml`), installs each
+   result into a fresh container and runs `PKG_SMOKE_TEST`. A change below `build/`
+   rebuilds every package. `Build result` is a required check.
+3. **Merge**: bump pull requests are merged automatically once the required checks
+   pass (`auto-merge.yml`), without review. The `testing` channel takes the place of
+   the review.
+4. **Release**: a push to `main` that changes `packages/<name>/` runs
+   `lf-release.yml`. It builds the package again and creates the GitHub prerelease
+   `<name>-<version>-<iteration>` with the unsigned packages, a `SHA256SUMS` that
+   records the distro of each file, and a build provenance attestation. The
+   iteration starts at 1 for a new version and counts up with every further change
+   to the package directory, e.g. a recipe fix. A rebuild without a change:
+   `gh workflow run lf-release.yml --field package=<name>`.
+5. **Promotion**: `lf-promote.yml` turns every prerelease that is 7 days old into a
+   full release. Intervene by hand with
+   `gh workflow run lf-promote.yml --field release=<tag> --field action=promote`
+   (release now) or `action=reject` (never release, remove from `testing`).
+6. **Publish**: `build/publish.sh` runs from a systemd timer on the repository
+   server. It mirrors the GitHub releases into the repositories: prerelease to
+   `testing`, release to `release`, rejected prerelease out of `testing` again.
+   Before publishing, it verifies every file against its attestation
+   (`gh attestation verify`), signs the RPMs and the repository metadata with the
+   Linuxfabrik key and updates the repositories (`createrepo_c`, freight).
 
-The intended flow, not implemented yet: publishing targets a
-[Pulp](https://pulpproject.org/) server. `build/publish.sh` uploads each built package
-into the matching Linuxfabrik repository and triggers a new publication:
+The signing key never leaves the repository server: CI only ever handles unsigned
+packages, and the server pulls instead of GitHub pushing to it. The GitHub releases
+double as the archive of every package ever built.
 
-- RPM: `pulp rpm content upload --repository=<repo> --file=<rpm>`, then `pulp rpm
-  publication create --repository=<repo>`.
-- DEB: `pulp deb content upload --repository=<repo> --file=<deb>`, then `pulp deb
-  publication create --repository=<repo>`.
+### Repository layout
 
-Distributions are created with `--repository`, so the newest publication is served
-immediately. **Pulp signs the repository metadata itself** through its signing service
-(the Linuxfabrik GPG key); no package or metadata signing happens in CI, and
-`repo_gpgcheck=1` is enforced on clients.
+One aggregated Linuxfabrik repository per distribution, the same layout the Pulp
+server will serve later (GitLab `001/project-big-picture` #1252), so client
+configuration does not change when it takes over:
 
-Repository layout: one aggregated Linuxfabrik repository per distribution -- EL
-(`el/<version>/<arch>/`, one per EL major, covering Rocky/Alma/RHEL/CentOS via the
-client's `$releasever`/`$basearch`), Debian and Ubuntu (`<debian|ubuntu>/` with
-`dists/<codename>-<channel>/main`), and SLES (`sles/<version>/<arch>/`, own packages
-only). Two channels: `release` and `testing`.
-
-`build/publish.sh` is currently a stub, deferred on purpose: the Pulp server is not
-deployed yet, and the target repositories and signing service are provisioned as part
-of that rollout. The earlier per-package `createrepo`/`freight` publishing is being
-retired and must not be wired here.
+- RPM: `<el|fedora|sles>/<os-version>/<arch>/linuxfabrik/<release|testing>/`. EL
+  covers Rocky, Alma, RHEL and CentOS through `$releasever_major` and `$basearch`.
+  noarch packages go into every arch directory. Packages are signed, and so is
+  `repodata/repomd.xml`, so clients can set `repo_gpgcheck=1`.
+- DEB: `<debian|ubuntu>/linuxfabrik/` with `dists/<codename>-<release|testing>/main`,
+  e.g. `deb [signed-by=/usr/share/keyrings/linuxfabrik.gpg] https://repo.linuxfabrik.ch/debian/linuxfabrik trixie-release main`.
+  No architecture in the path, apt picks it from the `Release` file
+  (`amd64 arm64`).
 
 **Arch/pacman is intentionally out of scope.** Pulp ships `pulp_rpm`, `pulp_deb` and
 `pulp_file` but no pacman plugin (verified against the Pulp source), so there is no Linuxfabrik

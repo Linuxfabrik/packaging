@@ -1,0 +1,77 @@
+name: 'Linuxfabrik: Build changed packages'
+
+# Builds and smoke-tests every package a pull request touches, so that an
+# upstream bump is only merged once it builds and installs on all its target
+# distros. A change below build/ rebuilds every package.
+#
+# No `paths` filter on purpose: the `Build result` job is a required check, and a
+# required check whose workflow never starts keeps every other pull request
+# blocked.
+
+on:
+  pull_request: {}
+
+permissions:
+  contents: 'read'
+
+jobs:
+  changed-packages:
+    runs-on:
+      - 'ubuntu-24.04'
+    outputs:
+      packages: '${{ steps.changed.outputs.packages }}'
+    steps:
+      - name: 'Harden the runner (Audit all outbound calls)'
+        uses: 'step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2' # v2.22.2
+        with:
+          egress-policy: 'audit'
+
+      - name: 'git clone https://github.com/Linuxfabrik/packaging'
+        uses: 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1' # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - id: 'changed'
+        env:
+          BASE_SHA: '${{ github.event.pull_request.base.sha }}'
+          HEAD_SHA: '${{ github.event.pull_request.head.sha }}'
+        run: |
+          packages="$(bash build/changed-packages.sh --include-build "$BASE_SHA" "$HEAD_SHA" \
+              | jq --raw-input --slurp --compact-output 'split("\n") | map(select(length > 0))')"
+          echo "Packages to build: $packages"
+          echo "packages=$packages" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: 'changed-packages'
+    if: "needs.changed-packages.outputs.packages != '[]'"
+    strategy:
+      fail-fast: false
+      matrix:
+        package: '${{ fromJson(needs.changed-packages.outputs.packages) }}'
+    uses: './.github/workflows/lf-build-linux-x86_64.yml'
+    with:
+      package: '${{ matrix.package }}'
+
+  # One stable check name for the ruleset, whatever packages the matrix covers.
+  # A skipped build (nothing to build) counts as success.
+  build-result:
+    name: 'Build result'
+    needs:
+      - 'build'
+      - 'changed-packages'
+    if: 'always()'
+    runs-on:
+      - 'ubuntu-24.04'
+    steps:
+      - name: 'Harden the runner (Audit all outbound calls)'
+        uses: 'step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2' # v2.22.2
+        with:
+          egress-policy: 'audit'
+
+      - env:
+          BUILD_RESULT: '${{ needs.build.result }}'
+          CHANGED_RESULT: '${{ needs.changed-packages.result }}'
+        run: |
+          echo "changed-packages: $CHANGED_RESULT, build: $BUILD_RESULT"
+          [ "$CHANGED_RESULT" = 'success' ]
+          [ "$BUILD_RESULT" = 'success' ] || [ "$BUILD_RESULT" = 'skipped' ]
