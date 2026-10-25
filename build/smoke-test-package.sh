@@ -49,8 +49,12 @@ debian-* | ubuntu-*)
         'apt-get update && apt-get install --no-install-recommends --yes /packaged/*.deb'
     ;;
 rocky-* | rhel-* | almalinux-* | centos-*)
+    # same CDN instead of the mirrorlist as in build/containerfiles/rocky-v*
     podman exec "$container" /bin/bash -c \
-        'dnf --assumeyes install dnf-plugins-core epel-release && crb enable &&
+        'sed --in-place --expression="s|^mirrorlist=|#mirrorlist=|" \
+             --expression="s|^#baseurl=http://dl.rockylinux.org|baseurl=https://dl.rockylinux.org|" \
+             /etc/yum.repos.d/[Rr]ocky*.repo 2>/dev/null || true
+         dnf --assumeyes install dnf-plugins-core epel-release && crb enable &&
          dnf --assumeyes --setopt=install_weak_deps=False install /packaged/*.rpm'
     ;;
 fedora-*)
