@@ -19,7 +19,7 @@ jobs:
     runs-on:
       - 'ubuntu-24.04'
     outputs:
-      packages: '${{ steps.changed.outputs.packages }}'
+      builds: '${{ steps.changed.outputs.builds }}'
     steps:
       - name: 'Harden the runner (Audit all outbound calls)'
         uses: 'step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2' # v2.22.2
@@ -36,20 +36,32 @@ jobs:
           BASE_SHA: '${{ github.event.pull_request.base.sha }}'
           HEAD_SHA: '${{ github.event.pull_request.head.sha }}'
         run: |
-          packages="$(bash build/changed-packages.sh --include-build "$BASE_SHA" "$HEAD_SHA" \
-              | jq --raw-input --slurp --compact-output 'split("\n") | map(select(length > 0))')"
-          echo "Packages to build: $packages"
-          echo "packages=$packages" >> "$GITHUB_OUTPUT"
+          # One build per package and architecture (PKG_ARCHES, default x86_64).
+          # Assigned first, so a failing script stops the step (bash -e) instead
+          # of yielding an empty list that would let "Build result" pass.
+          names="$(bash build/changed-packages.sh --include-build "$BASE_SHA" "$HEAD_SHA")"
+          builds='[]'
+          for name in $names; do
+            # shellcheck source=/dev/null
+            arches="$(source "packages/$name/package.conf" && echo "${PKG_ARCHES:-x86_64}")"
+            for arch in $arches; do
+              builds="$(jq --compact-output --arg name "$name" --arg arch "$arch" \
+                  '. + [{package: $name, arch: $arch}]' <<< "$builds")"
+            done
+          done
+          echo "Builds: $builds"
+          echo "builds=$builds" >> "$GITHUB_OUTPUT"
 
   build:
     needs: 'changed-packages'
-    if: "needs.changed-packages.outputs.packages != '[]'"
+    if: "needs.changed-packages.outputs.builds != '[]'"
     strategy:
       fail-fast: false
       matrix:
-        package: '${{ fromJson(needs.changed-packages.outputs.packages) }}'
-    uses: './.github/workflows/lf-build-linux-x86_64.yml'
+        include: '${{ fromJson(needs.changed-packages.outputs.builds) }}'
+    uses: './.github/workflows/lf-build-linux.yml'
     with:
+      arch: '${{ matrix.arch }}'
       package: '${{ matrix.package }}'
 
   # One stable check name for the ruleset, whatever packages the matrix covers.

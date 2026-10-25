@@ -175,6 +175,20 @@ On EL, a package may depend on EPEL and the CRB repository, as glances does. The
 containers and the smoke test enable both, and the README tells administrators to do the
 same.
 
+### Architectures
+
+`PKG_ARCHES` in `package.conf` lists the architectures a package is built for, `x86_64` (the
+default) and `aarch64`. A noarch package (`BuildArch: noarch`, `Architecture: all`) is built
+once, on `x86_64`, and published for both: the repository server copies noarch RPMs into every
+arch directory, and apt picks `Architecture: all` up on `amd64` and `arm64`. Building it on
+both would produce two files with the same name, which the release job refuses. Only a
+package with compiled parts, such as a Go binary or Python wheels with C extensions, sets
+`PKG_ARCHES='x86_64 aarch64'`.
+
+aarch64 builds run natively on GitHub's `ubuntu-24.04-arm` runners. Locally,
+`matrix-package.sh` passes the architecture to podman (`--arch`), so on an x86_64 workstation
+with qemu-user-static an aarch64 build runs emulated, slowly but with the same scripts.
+
 
 ## Why native recipes, not FPM
 
@@ -201,6 +215,7 @@ PKG_RPM_DISTROS='rocky-v10 fedora-v44'   # EL and Fedora targets
 PKG_DEB_DEBIAN_DIR='deb/debian'
 PKG_DEB_DISTROS='debian-v13 ubuntu-v2404'
 PKG_SMOKE_TEST='glances --version'  # run as nobody after installing into a fresh container
+# PKG_ARCHES='x86_64 aarch64'       # only for packages with compiled parts, default x86_64
 ```
 
 `build/check-upstream.sh` watches the upstream for new versions. Besides
@@ -341,7 +356,7 @@ pre-commit, CodeQL, Scorecard, dependency review) keep their common names.
    the next run: their release workflow sends a `repository_dispatch` of type
    `upstream-release` to this repository.
 2. **Build and smoke test**: `lf-build-pr.yml` builds every package a pull request
-   touches on all its target distros (`lf-build-linux-x86_64.yml`), installs each
+   touches on all its target distros and architectures (`lf-build-linux.yml`), installs each
    result into a fresh container and runs `PKG_SMOKE_TEST`. A change below `build/`
    rebuilds every package. `Build result` is a required check.
 3. **Merge**: bump pull requests are merged automatically once the required checks

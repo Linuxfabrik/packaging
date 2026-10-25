@@ -15,6 +15,8 @@
 #
 # Required environment:
 #   PKG_NAME
+#   PKG_OCI_ARCH       architecture in podman's naming (amd64, arm64), set by
+#                      matrix-package.sh
 #   PKG_DIR_REPO       absolute path to this repository checkout (host)
 #   PKG_DIR_PACKAGED   absolute path holding the built packages per distro (host)
 #
@@ -34,6 +36,7 @@ image="$(awk '/^FROM / { print $2; exit }' "$PKG_DIR_REPO/build/containerfiles/$
 
 echo "✅ Install the $distro packages into a fresh $image container"
 podman run \
+    --arch "$PKG_OCI_ARCH" \
     --detach \
     --mount "type=bind,source=$PKG_DIR_PACKAGED/$distro,destination=/packaged,relabel=private,ro=true" \
     --name "$container" \
