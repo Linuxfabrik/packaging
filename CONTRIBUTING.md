@@ -404,7 +404,8 @@ configuration does not change when it takes over:
   Alma, RHEL and CentOS; `linuxfabrik-release` writes the EL major version at build time,
   because EL 8 has no `$releasever_major`, and uses `$basearch` for the arch. noarch packages go
   into every arch directory. Packages are signed, and so is `repodata/repomd.xml`, so clients
-  can set `repo_gpgcheck=1`. `sle` (not `sles`) serves SLES, SLED and openSUSE Leap alike, as
+  can set `repo_gpgcheck=1`; `linuxfabrik-release` leaves it off, see the comment in its
+  `linuxfabrik.repo`. `sle` (not `sles`) serves SLES, SLED and openSUSE Leap alike, as
   the monitoring-plugins repository does; the build containers keep the `sles-v*` names.
 - DEB: `<debian|ubuntu>/linuxfabrik/` with `dists/<codename>-<release|testing>/main`,
   e.g. `deb [signed-by=/usr/share/keyrings/linuxfabrik.gpg] https://repo.linuxfabrik.ch/debian/linuxfabrik trixie-release main`.
