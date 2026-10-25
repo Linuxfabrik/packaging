@@ -73,6 +73,9 @@ jobs:
     # dnf in a rocky-v8 smoke test, run 40189467280).
     timeout-minutes: 30
     strategy:
+      # Build every distro to the end, so one run shows all distros that fail,
+      # not just the first. A release still needs all of them to succeed.
+      fail-fast: false
       matrix:
         distro: '${{ fromJson(needs.prepare-matrix.outputs.distro_list) }}'
     steps:
