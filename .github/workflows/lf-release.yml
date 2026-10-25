@@ -124,7 +124,9 @@ jobs:
       # Release assets are a flat list, so the distro each file was built for goes
       # into SHA256SUMS as its directory (`<sha256>  <distro>/<file>`). The
       # repository server maps the downloaded assets back by checksum, which also
-      # survives GitHub renaming an asset.
+      # survives GitHub renaming an asset. The distro comes from the artifact
+      # name; inside the artifact the files sit one level down, in <distro>/, as
+      # matrix-package.sh collects them, hence the `find`.
       - name: 'Collect the assets and write SHA256SUMS'
         env:
           ARTIFACTS: '${{ runner.temp }}/artifacts'
@@ -135,7 +137,7 @@ jobs:
           for dir in "$ARTIFACTS/$PACKAGE-x86_64-"*/; do
             distro="$(basename "$dir")"
             distro="${distro#"$PACKAGE-x86_64-"}"
-            for file in "$dir"*; do
+            while IFS= read -r -d '' file; do
               name="$(basename "$file")"
               if [ -e "$ASSETS/$name" ]; then
                 echo "Two distros produced the same file name: $name" >&2
@@ -143,8 +145,12 @@ jobs:
               fi
               cp "$file" "$ASSETS/$name"
               echo "$(sha256sum "$file" | cut --delimiter=' ' --fields=1)  $distro/$name" >> "$ASSETS/SHA256SUMS"
-            done
+            done < <(find "$dir" -type f -print0)
           done
+          if [ ! -s "$ASSETS/SHA256SUMS" ]; then
+            echo "No packages found in $ARTIFACTS" >&2
+            exit 1
+          fi
           cat "$ASSETS/SHA256SUMS"
 
       - name: 'Attest the build provenance'
