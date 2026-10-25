@@ -1,4 +1,4 @@
-name: 'Linuxfabrik: Build changed packages'
+name: 'Linuxfabrik: 20 - Build changed packages'
 
 # Builds and smoke-tests every package a pull request touches, so that an
 # upstream bump is only merged once it builds and installs on all its target

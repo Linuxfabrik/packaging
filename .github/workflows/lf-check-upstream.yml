@@ -1,4 +1,4 @@
-name: 'Linuxfabrik: Check upstream versions'
+name: 'Linuxfabrik: 10 - Check upstream versions'
 
 on:
   # Linuxfabrik's own projects send `upstream-release` from their release

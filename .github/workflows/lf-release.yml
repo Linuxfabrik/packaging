@@ -1,4 +1,4 @@
-name: 'Linuxfabrik: Release'
+name: 'Linuxfabrik: 40 - Release'
 
 # Builds every package changed on main and publishes the result as a GitHub
 # prerelease `<package>-<version>-<iteration>`. The prerelease is the `testing`

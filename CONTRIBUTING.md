@@ -325,7 +325,13 @@ installed host, from the bootstrap link to the first update.
 ## Build and publish pipeline
 
 Every release of a packaged project ends up on repo.linuxfabrik.ch without a manual
-step, first in the `testing` channel and seven days later in `release`:
+step, first in the `testing` channel and seven days later in `release`. The workflows
+of this pipeline carry a number in their display name that follows the order below
+(`Linuxfabrik: 10 - Check upstream versions` to `Linuxfabrik: 50 - Promote releases`),
+so the Actions list reads like the pipeline. Only the display names are numbered: the
+file names stay, because `publish.sh` checks the attestations against the path of
+`lf-release.yml`. The workflows shared with all Linuxfabrik repositories (auto-merge,
+pre-commit, CodeQL, Scorecard, dependency review) keep their common names.
 
 1. **Version detection**: `lf-check-upstream.yml` runs hourly and compares each
    `PKG_VERSION` with the latest upstream version. When the upstream is ahead,
