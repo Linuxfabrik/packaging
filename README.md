@@ -37,11 +37,48 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add a package and for the pack
 pattern for GUI apps, and the release trigger).
 
 
+## Using the repository
+
+`linuxfabrik-release` sets up the signed Linuxfabrik repository on a host, the way `epel-release` does for EPEL: the repository configuration with the `release` channel enabled and the `testing` channel disabled, and the key the packages and the repository metadata are signed with.
+
+RHEL 8, 9 and 10 and compatibles (replace `el10` with `el8` or `el9`):
+
+```bash
+sudo dnf install https://repo.linuxfabrik.ch/linuxfabrik-release-latest-el10.noarch.rpm
+```
+
+Fedora:
+
+```bash
+sudo dnf install https://repo.linuxfabrik.ch/linuxfabrik-release-latest-fedora44.noarch.rpm
+```
+
+SLES and openSUSE Leap 15 and 16 (replace `sle16` with `sle15`):
+
+```bash
+sudo rpm --import https://repo.linuxfabrik.ch/linuxfabrik.key
+sudo zypper install https://repo.linuxfabrik.ch/linuxfabrik-release-latest-sle16.noarch.rpm
+```
+
+Debian 12 and 13, Ubuntu 22.04, 24.04 and 26.04 (replace `debian13` with `debian12`, `ubuntu22.04`, `ubuntu24.04` or `ubuntu26.04`):
+
+```bash
+curl --fail --location --remote-name https://repo.linuxfabrik.ch/linuxfabrik-release-latest-debian13.deb
+sudo apt install ./linuxfabrik-release-latest-debian13.deb
+sudo apt update
+```
+
+Then install packages as usual, e.g. `sudo dnf install glances`. On RHEL and compatibles, some packages depend on EPEL; glances, for example, needs `epel-release` and the CRB repository.
+
+New package versions wait in the `testing` channel for 7 days before they reach `release`. To try them earlier, enable `linuxfabrik-testing` (`dnf config-manager --set-enabled linuxfabrik-testing`, `zypper modifyrepo --enable linuxfabrik-testing`), or on Debian and Ubuntu set `Enabled: yes` for the testing entry in `/etc/apt/sources.list.d/linuxfabrik.sources`.
+
+
 ## Repository layout
 
 ```
 packages/<name>/
   package.conf            # manifest: source, version, per-format distro targets
+  src/                    # own source, for packages without an upstream (PKG_SOURCE_DIR)
   rpm/<name>.spec         # RPM recipe (EL, Fedora, SLES)
   deb/debian/             # DEB recipe (control, rules, copyright, source/format)
   files/                  # shared assets, e.g. the systemd unit

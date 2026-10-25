@@ -23,16 +23,29 @@ export PKG_DIR_PACKAGE="$PKG_DIR_REPO/packages/$PKG_NAME"
 export PKG_DIR_SOURCES
 PKG_DIR_SOURCES="$(mktemp --directory)"
 
-# Load the product manifest. It defines at least PKG_VERSION, PKG_SOURCE_URL,
-# PKG_SOURCE_TARBALL and the per-format distro lists and recipe paths.
+# Load the product manifest. It defines at least PKG_VERSION, PKG_SOURCE_TARBALL,
+# either PKG_SOURCE_URL or PKG_SOURCE_DIR, and the per-format distro lists and
+# recipe paths.
 # shellcheck source=/dev/null
 source "$PKG_DIR_PACKAGE/package.conf"
 export PKG_NAME PKG_VERSION PKG_SOURCE_TARBALL
 
-echo "✅ Fetch upstream source for $PKG_NAME $PKG_VERSION"
-curl --fail --silent --show-error --location \
-    "$PKG_SOURCE_URL" \
-    --output "$PKG_DIR_SOURCES/$PKG_SOURCE_TARBALL"
+if [ -n "${PKG_SOURCE_DIR:-}" ]; then
+    # A package without an upstream (e.g. linuxfabrik-release) keeps its source
+    # in the repository. Pack it the way an upstream tarball looks, with a
+    # top-level <name>-<version>/ directory, so the recipes need no special case.
+    echo "✅ Pack source $PKG_SOURCE_DIR for $PKG_NAME $PKG_VERSION"
+    tar --create --gzip \
+        --directory "$PKG_DIR_PACKAGE" \
+        --file "$PKG_DIR_SOURCES/$PKG_SOURCE_TARBALL" \
+        --transform "s|^$PKG_SOURCE_DIR|$PKG_NAME-$PKG_VERSION|" \
+        "$PKG_SOURCE_DIR"
+else
+    echo "✅ Fetch upstream source for $PKG_NAME $PKG_VERSION"
+    curl --fail --silent --show-error --location \
+        "$PKG_SOURCE_URL" \
+        --output "$PKG_DIR_SOURCES/$PKG_SOURCE_TARBALL"
+fi
 
 echo "✅ Build $PKG_NAME for $PKG_TARGET_DISTRO"
 case "$PKG_TARGET_DISTRO" in

@@ -10,7 +10,7 @@
 # create-package.sh.
 #
 # Required environment:
-#   PKG_VERSION, PKG_PACKAGE_ITERATION, PKG_ARCH
+#   PKG_VERSION, PKG_PACKAGE_ITERATION, PKG_ARCH, PKG_TARGET_DISTRO
 #   PKG_DIR_SOURCES   directory holding the fetched source tarball
 #   PKG_DIR_PACKAGED  directory to copy the resulting RPM(s) into
 
@@ -37,6 +37,19 @@ builddep() {
 }
 
 echo "✅ Setup rpm build tree"
+# SLES builds in /usr/src/packages by default; pin the tree to ~/rpmbuild on
+# every distro, as the monitoring-plugins build does.
+echo "%_topdir $HOME/rpmbuild" > "$HOME/.rpmmacros"
+# SLES defines no %{dist}, so the SLES 15 and SLES 16 builds of a package would
+# share one file name, which the flat list of GitHub release assets cannot hold.
+# Give them a tag after the platform instead (sles-v16 -> .sle16), matching the
+# repository path sle/16 that also serves SLED and openSUSE Leap.
+if [ -z "$(rpm --eval '%{?dist}')" ]; then
+    case "$PKG_TARGET_DISTRO" in
+    sles-v*) echo "%dist .sle${PKG_TARGET_DISTRO#sles-v}" >> "$HOME/.rpmmacros" ;;
+    *) echo "%dist .${PKG_TARGET_DISTRO/-v/}" >> "$HOME/.rpmmacros" ;;
+    esac
+fi
 mkdir --parent "$HOME"/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 cp "$PKG_DIR_SOURCES"/* "$HOME/rpmbuild/SOURCES/"
 # Additional spec sources (e.g. the systemd unit referenced as Source1) live in

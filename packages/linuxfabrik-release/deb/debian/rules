@@ -1,0 +1,22 @@
+#!/usr/bin/make -f
+
+# The build runs on the target suite, so its os-release names the repository
+# (debian or ubuntu) and the codename that go into the APT source.
+OS := $(shell . /etc/os-release && echo $$ID)
+CODENAME := $(shell . /etc/os-release && echo $$VERSION_CODENAME)
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	sed 's|@OS@|$(OS)|g; s|@CODENAME@|$(CODENAME)|g' linuxfabrik.sources > linuxfabrik.sources.built
+	# APT wants the key as a binary keyring; the base images ship no gpg to
+	# convert it at install time.
+	gpg --dearmor < RPM-GPG-KEY-linuxfabrik > linuxfabrik.gpg
+
+override_dh_auto_install:
+	install -D -m 0644 linuxfabrik.sources.built debian/linuxfabrik-release/etc/apt/sources.list.d/linuxfabrik.sources
+	install -D -m 0644 linuxfabrik.gpg debian/linuxfabrik-release/usr/share/keyrings/linuxfabrik.gpg
+
+override_dh_auto_clean:
+	rm -f linuxfabrik.sources.built linuxfabrik.gpg

@@ -1,0 +1,17 @@
+Source: linuxfabrik-release
+Maintainer: Linuxfabrik GmbH <info@linuxfabrik.ch>
+Section: admin
+Priority: optional
+Standards-Version: 4.6.2
+Homepage: https://github.com/Linuxfabrik/packaging
+Rules-Requires-Root: no
+Build-Depends: debhelper-compat (= 13),
+               gnupg
+
+Package: linuxfabrik-release
+Architecture: all
+Depends: ${misc:Depends}
+Description: Linuxfabrik repository configuration
+ This package contains the APT source for repo.linuxfabrik.ch and the GPG key
+ the repository is signed with. The release channel is enabled, the testing
+ channel is configured but disabled.
