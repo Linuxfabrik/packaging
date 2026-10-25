@@ -6,7 +6,8 @@
 # License: The Unlicense, see LICENSE file.
 #
 # For every target distro in PKG_TARGET_DISTROS, build the matching container
-# image from build/containerfiles/<distro> and run create-package.sh inside it.
+# image from build/containerfiles/<distro> and run create-package.sh inside it,
+# then smoke-test the result in a fresh container of the same distro.
 # Built packages land on the host under PKG_DIR_PACKAGED/<distro>.
 #
 # Required environment:
@@ -38,4 +39,6 @@ for distro in $PKG_TARGET_DISTROS; do
         --rm \
         "packaging-build-$distro" \
         /bin/bash /repo/build/create-package.sh
+
+    bash "$PKG_DIR_REPO/build/smoke-test-package.sh" "$distro"
 done

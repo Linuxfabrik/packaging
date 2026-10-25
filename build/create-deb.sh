@@ -10,7 +10,7 @@
 # environment set by create-package.sh.
 #
 # Required environment:
-#   PKG_NAME, PKG_VERSION, PKG_PACKAGE_ITERATION
+#   PKG_NAME, PKG_VERSION, PKG_PACKAGE_ITERATION, PKG_TARGET_DISTRO
 #   PKG_DIR_PACKAGE   product directory (for product files such as the unit file)
 #   PKG_DIR_SOURCES   directory holding the fetched source tarball
 #   PKG_DIR_PACKAGED  directory to copy the resulting .deb(s) into
@@ -36,9 +36,24 @@ if [ -d "$PKG_DIR_PACKAGE/files" ]; then
     cp "$PKG_DIR_PACKAGE/files/"* "$src/debian/"
 fi
 
+# Append the target distro to the Debian revision (debian-v13 -> +debian13,
+# ubuntu-v2404 -> +ubuntu24.04), as packages.sury.org does. Every suite gets its
+# own build, and without the suffix all of them share one file name, which a
+# repository with a single pool for all suites (pulp_deb, reprepro) cannot hold.
+# A newer distro release also sorts higher, so a dist-upgrade picks up its build.
+case "$PKG_TARGET_DISTRO" in
+ubuntu-v*)
+    distro_version="${PKG_TARGET_DISTRO#ubuntu-v}"
+    distro_suffix="ubuntu${distro_version:0:2}.${distro_version:2}"
+    ;;
+*)
+    distro_suffix="${PKG_TARGET_DISTRO/-v/}"
+    ;;
+esac
+
 # Inject version and metadata debuild reads from the changelog.
 cat <<EOF > "$src/debian/changelog"
-$PKG_NAME ($PKG_VERSION-$PKG_PACKAGE_ITERATION) unstable; urgency=medium
+$PKG_NAME ($PKG_VERSION-$PKG_PACKAGE_ITERATION+$distro_suffix) unstable; urgency=medium
 
   * v$PKG_VERSION release.
 

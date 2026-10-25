@@ -1,0 +1,96 @@
+name: 'Linuxfabrik: Promote releases'
+
+# A package lands in the `testing` channel as a GitHub prerelease (lf-release.yml).
+# This workflow promotes every prerelease that is at least 7 days old to a full
+# release, which the repository server then publishes to the `release` channel.
+#
+# Manual intervention:
+#
+#   gh workflow run lf-promote.yml --field release=<tag> --field action=promote
+#     releases a prerelease right away
+#   gh workflow run lf-promote.yml --field release=<tag> --field action=reject
+#     appends "(rejected)" to its title: it is never promoted, and the
+#     repository server removes it from `testing`
+
+on:
+  schedule:
+    # Daily at 05:00 UTC.
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'What to do with the release given below.'
+        required: false
+        type: 'choice'
+        default: 'promote'
+        options:
+          - 'promote'
+          - 'reject'
+      release:
+        description: 'Tag of a prerelease (e.g. `glances-4.5.8-1`). Leave empty to run the regular 7-day promotion.'
+        required: false
+        default: ''
+
+permissions:
+  contents: 'read'
+
+# Never let the scheduled run and a manual one edit the same release at once.
+concurrency:
+  group: 'lf-promote'
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    runs-on:
+      - 'ubuntu-24.04'
+    permissions:
+      contents: 'write'
+    steps:
+      - name: 'Harden the runner (Audit all outbound calls)'
+        uses: 'step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2' # v2.22.2
+        with:
+          egress-policy: 'audit'
+
+      - name: 'Promote or reject'
+        env:
+          ACTION: '${{ inputs.action }}'
+          GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+          RELEASE: '${{ inputs.release }}'
+          TESTING_DAYS: '7'
+        run: |
+          promote() {
+            echo "Promote $1 to release"
+            gh release edit "$1" --latest=false --prerelease=false --repo "$GITHUB_REPOSITORY"
+          }
+
+          if [ -n "$RELEASE" ]; then
+            read -r prerelease name < <(gh release view "$RELEASE" \
+                --json 'isPrerelease,name' --jq '"\(.isPrerelease) \(.name)"' \
+                --repo "$GITHUB_REPOSITORY")
+            if [ "$prerelease" != 'true' ]; then
+              echo "$RELEASE is not a prerelease (not in testing), nothing to $ACTION." >&2
+              exit 1
+            fi
+            if [[ "$name" == *'(rejected)' ]]; then
+              echo "$RELEASE is already rejected." >&2
+              exit 1
+            fi
+            if [ "$ACTION" = 'reject' ]; then
+              echo "Reject $RELEASE"
+              gh release edit "$RELEASE" --repo "$GITHUB_REPOSITORY" --title "$name (rejected)"
+            else
+              promote "$RELEASE"
+            fi
+            exit 0
+          fi
+
+          cutoff="$(date --utc --date="$TESTING_DAYS days ago" +%Y-%m-%dT%H:%M:%SZ)"
+          gh release list \
+              --exclude-drafts \
+              --json 'isPrerelease,name,publishedAt,tagName' \
+              --limit 1000 \
+              --repo "$GITHUB_REPOSITORY" \
+              --jq ".[] | select(.isPrerelease and (.name | endswith(\"(rejected)\") | not) and .publishedAt <= \"$cutoff\") | .tagName" \
+            | while read -r tag; do
+                promote "$tag"
+              done

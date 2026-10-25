@@ -46,12 +46,15 @@ packages/<name>/
   deb/debian/             # DEB recipe (control, rules, copyright, source/format)
   files/                  # shared assets, e.g. the systemd unit
 build/
+  changed-packages.sh     # which packages a commit range touches (for CI)
+  check-upstream.sh       # is a package behind its upstream release?
   containerfiles/         # one build environment per distro (rocky-*, fedora-*, debian-*, ...)
   create-package.sh       # entry point: fetch source, dispatch to the format builder
   create-rpm.sh           # build a binary RPM from a spec (dnf or zypper)
   create-deb.sh           # build a binary .deb from a debian/ recipe
   matrix-package.sh       # build one package across many distros, each in a container
-  publish.sh              # hand the built packages to the repo server
+  publish.sh              # on the repo server: pull, verify, sign and publish releases
+  smoke-test-package.sh   # install a build into a fresh container and run its smoke test
 ```
 
 
@@ -60,7 +63,7 @@ build/
 1. Create `packages/<name>/` with `package.conf`, the recipes you need (`rpm/`, `deb/`) and any shared `files/`.
 2. Set the source, version and the `PKG_RPM_DISTROS` / `PKG_DEB_DISTROS` targets in `package.conf`.
 3. Build locally to verify (see below).
-4. Open a pull request. On merge, the pipeline builds and publishes the package.
+4. Open a pull request. On merge, the pipeline builds the package and publishes it to the `testing` channel; seven days later it moves to `release`.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the details.
 
@@ -77,7 +80,7 @@ PKG_DIR_PACKAGED="$(pwd)/packaged" \
 bash build/matrix-package.sh
 ```
 
-Built packages are collected under `packaged/<distro>/`.
+Built packages are collected under `packaged/<distro>/`. Each one is then installed into a fresh container of its distro and smoke-tested.
 
 
 ## Support the Project

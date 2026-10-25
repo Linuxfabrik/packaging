@@ -64,6 +64,37 @@ jobs:
           GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
           PR_URL: '${{ github.event.pull_request.html_url }}'
 
+  # An upstream version bump from lf-check-upstream.yml goes in without review
+  # once the required checks pass, including `Build result` from
+  # lf-build-pr.yml, which builds and smoke-tests the package on all its target
+  # distros. Its merge then starts lf-release.yml, which publishes to the
+  # `testing` channel first.
+  #
+  # Auto-merge is enabled with the app token, not GITHUB_TOKEN: GitHub starts no
+  # workflow for a push made by GITHUB_TOKEN, so the merge would never trigger
+  # the release.
+  upstream-bump:
+    runs-on: 'ubuntu-latest'
+    if: >-
+      github.actor == 'linuxfabrik-automation[bot]'
+      && startsWith(github.head_ref, 'bump/')
+    permissions:
+      contents: 'read'
+    steps:
+
+      - name: 'Generate app token'
+        id: 'app-token'
+        uses: 'actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510' # v3.3.0
+        with:
+          client-id: '${{ vars.LF_AUTOMATION_CLIENT_ID }}'
+          private-key: '${{ secrets.LF_AUTOMATION_APP_PRIVATE_KEY }}'
+
+      - run: |
+          gh pr merge --auto --squash "$PR_URL"
+        env:
+          GH_TOKEN: '${{ steps.app-token.outputs.token }}'
+          PR_URL: '${{ github.event.pull_request.html_url }}'
+
   # The weekly hook bump carries nothing but `rev:` changes in
   # .pre-commit-config.yaml, and it arrives in every repository at once.
   # Merging that by hand is pure overhead, so it goes in as soon as the
