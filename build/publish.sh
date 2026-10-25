@@ -436,8 +436,8 @@ that the distributions do not ship, built from the upstream sources in
 One repository per distribution, for x86_64 and aarch64.</p>
 
 <h2>Set up the repository</h2>
-<p><code>linuxfabrik-release</code> configures the repository and installs the signing key,
-the way <code>epel-release</code> does for EPEL. Pick your distribution:</p>
+<p><code>linuxfabrik-release</code> configures the repository and installs the signing key.
+Pick your distribution:</p>
 EOF
 
         for dir in $(find "$PUBLISH_WEBROOT/el" "$PUBLISH_WEBROOT/fedora" "$PUBLISH_WEBROOT/sle" \

@@ -39,7 +39,7 @@ pattern for GUI apps, and the release trigger).
 
 ## Using the repository
 
-`linuxfabrik-release` sets up the signed Linuxfabrik repository on a host, the way `epel-release` does for EPEL: the repository configuration with the `release` channel enabled and the `testing` channel disabled, and the key the packages and the repository metadata are signed with.
+`linuxfabrik-release` sets up the signed Linuxfabrik repository on a host: the repository configuration with the `release` channel enabled and the `testing` channel disabled, and the key the packages and the repository metadata are signed with.
 
 RHEL 8, 9 and 10 and compatibles (replace `el10` with `el8` or `el9`):
 

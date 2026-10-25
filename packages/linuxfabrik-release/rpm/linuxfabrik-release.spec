@@ -63,6 +63,5 @@ install -D -p -m 0644 linuxfabrik.repo %{buildroot}%{repo_dir}/linuxfabrik.repo
 %dir %{_sysconfdir}/pki/rpm-gpg
 %endif
 
+# Written by build/create-rpm.sh for the version being built.
 %changelog
-* Sun Oct 25 2026 Linuxfabrik GmbH <info@linuxfabrik.ch> - 1-1
-- Initial package.
