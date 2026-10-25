@@ -48,6 +48,8 @@
 #
 # Needs: createrepo_c, dpkg (dpkg-deb), freight, gh, gpg, jq, rpm-sign, sha256sum.
 # The web server must follow symbolic links (bootstrap links, freight's dists/).
+# PUBLISH_FREIGHT_LIB and PUBLISH_WEBROOT must be on one mount, in the mount
+# namespace the script runs in (see check_freight_links).
 
 set -e -o pipefail -u
 
@@ -301,11 +303,36 @@ reject_release() {
     done
 }
 
+# freight hard-links the packages from its library into the webroot. If the two
+# are on different mounts, ln fails with EXDEV and freight silently copies
+# instead; at the end of every freight-cache it then deletes all pool files with
+# a link count of 1 (`find pool -links 1 -delete`), i.e. the copies of earlier
+# releases, which then answer 404 while still listed in Packages. Seen on
+# 001-p-repo51 (freight 0.3.13, Rocky 9) with systemd's
+# ReadWritePaths=/var/lib/freight /var/www/html/..., which makes each path its own
+# bind mount even on one filesystem. Refuse to run in that setup.
+check_freight_links() {
+    local probe="$PUBLISH_FREIGHT_LIB/.publish-link-probe.$$"
+    local target="$PUBLISH_WEBROOT/.publish-link-probe.$$"
+    local rc=0
+
+    touch "$probe"
+    ln "$probe" "$target" 2>/dev/null || rc=$?
+    rm --force "$probe" "$target"
+    if [ "$rc" -ne 0 ]; then
+        echo "Cannot hard-link from PUBLISH_FREIGHT_LIB ($PUBLISH_FREIGHT_LIB) into PUBLISH_WEBROOT ($PUBLISH_WEBROOT)." >&2
+        echo 'They must be on one mount, or freight deletes the pool files of earlier releases.' >&2
+        echo 'Under systemd sandboxing, list a common parent in ReadWritePaths= (e.g. /var).' >&2
+        return 1
+    fi
+}
+
 main() {
     local tag name prerelease channel workdir
     local done_dir="$PUBLISH_STATE_DIR/done"
 
-    mkdir --parents "$done_dir"
+    mkdir --parents "$done_dir" "$PUBLISH_FREIGHT_LIB" "$PUBLISH_WEBROOT"
+    check_freight_links
 
     # one run at a time, the timer may fire while a long run is still going
     exec 9> "$PUBLISH_STATE_DIR/lock"
