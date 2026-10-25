@@ -18,8 +18,11 @@ Architecture: all
 Depends: ${misc:Depends},
          ${python3:Depends}
 # The FirewallFabrik packages of mirror.plustech.de ship everything, including
-# /usr/bin/fwf*, as one package named firewallfabrik.
+# /usr/bin/fwf*, as one package named firewallfabrik. Conflicts/Replaces swap it
+# for this one; Provides lets `apt install firewallfabrik` find this package. A
+# package may conflict with a name it provides itself.
 Conflicts: firewallfabrik
+Provides: firewallfabrik (= ${binary:Version})
 Replaces: firewallfabrik
 Description: firewall policy compiler for iptables and nftables
  FirewallFabrik manages iptables and nftables policies for many Linux
@@ -40,7 +43,10 @@ Depends: ${misc:Depends},
          python3-pyside6.qtgui (>= 6.8),
          python3-pyside6.qtuitools (>= 6.8),
          python3-pyside6.qtwidgets (>= 6.8)
-Conflicts: firewallfabrik
+# No Conflicts: firewallfabrik here, it would hit the name the core package
+# provides. The core package removes the PLUSTECH package; Replaces covers
+# /usr/bin/fwf, which both ship.
+Provides: firewallfabrik-gui (= ${binary:Version})
 Replaces: firewallfabrik
 Description: Qt GUI of FirewallFabrik
  FirewallFabrik manages iptables and nftables policies for many Linux

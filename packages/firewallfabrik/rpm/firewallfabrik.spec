@@ -23,6 +23,9 @@ Source0:        https://github.com/Linuxfabrik/firewallfabrik/archive/v%{version
 
 BuildArch:      noarch
 
+# The upstream project name, so `dnf install firewallfabrik` finds this package.
+Provides:       %{srcname} = %{version}-%{release}
+
 BuildRequires:  desktop-file-utils
 BuildRequires:  python3-devel
 BuildRequires:  pyproject-rpm-macros
@@ -37,6 +40,7 @@ fwf-nft. The GUI is in %{name}-gui.
 
 %package gui
 Summary:        Qt GUI of FirewallFabrik
+Provides:       %{srcname}-gui = %{version}-%{release}
 Requires:       %{name} = %{version}-%{release}
 Requires:       python3-pyside6 >= 6.8
 Requires:       hicolor-icon-theme
