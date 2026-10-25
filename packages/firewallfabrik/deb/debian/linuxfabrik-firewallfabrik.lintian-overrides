@@ -1,0 +1,5 @@
+# Jinja templates and configlets that start with a shebang: the compilers render
+# them into the generated firewall scripts; they are never run as they are.
+script-not-executable [usr/lib/python3/dist-packages/firewallfabrik/resources/configlets/linux24/top_comment]
+script-not-executable [usr/lib/python3/dist-packages/firewallfabrik/resources/templates/nftables/script.sh.j2]
+shell-script-fails-syntax-check [usr/lib/python3/dist-packages/firewallfabrik/resources/templates/nftables/script.sh.j2]

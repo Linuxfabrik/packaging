@@ -20,6 +20,8 @@ Summary:        Firewall policy compiler for iptables and nftables
 License:        GPL-2.0-or-later
 URL:            https://github.com/Linuxfabrik/firewallfabrik
 Source0:        https://github.com/Linuxfabrik/firewallfabrik/archive/v%{version}/%{srcname}-%{version}.tar.gz
+# help2man include: the SEE ALSO section of the man pages
+Source1:        firewallfabrik.h2m
 
 BuildArch:      noarch
 
@@ -27,7 +29,10 @@ BuildArch:      noarch
 Provides:       %{srcname} = %{version}-%{release}
 
 BuildRequires:  desktop-file-utils
+# man pages from --help; `fwf --help` imports the GUI and needs PySide6
+BuildRequires:  help2man
 BuildRequires:  python3-devel
+BuildRequires:  python3-pyside6
 BuildRequires:  pyproject-rpm-macros
 # setup.py compiles the Qt resources with pyside6-rcc during the build.
 BuildRequires:  pyside6-tools
@@ -58,6 +63,11 @@ This package contains the Qt GUI, fwf.
 # files are installed through %%license below instead.
 sed -i '/^license-files = /d; s/"setuptools >= 77.0.3"/"setuptools"/' pyproject.toml
 
+# help2man runs in the C locale (Fedora/EL build it without locale support,
+# --locale only accepts C) and garbles the em dash of the `fwf --help` text in
+# the man page. Upstream is asked to use a plain hyphen; until then, replace it.
+sed -i 's/FirewallFabrik \xe2\x80\x94 firewall/FirewallFabrik - firewall/' src/%{srcname}/gui/app.py
+
 %generate_buildrequires
 %pyproject_buildrequires
 
@@ -67,6 +77,20 @@ sed -i '/^license-files = /d; s/"setuptools >= 77.0.3"/"setuptools"/' pyproject.
 %install
 %pyproject_install
 %pyproject_save_files %{srcname}
+
+# Man pages from --help, with a pointer to the full documentation.
+mkdir -p %{buildroot}%{_mandir}/man1
+for prog in fwf fwf-ipt fwf-nft fwf-upgrade; do
+    case "$prog" in
+    fwf) name='Qt GUI to manage iptables and nftables firewall policies' ;;
+    fwf-ipt) name='compile FirewallFabrik firewall policies into iptables scripts' ;;
+    fwf-nft) name='compile FirewallFabrik firewall policies into nftables scripts' ;;
+    fwf-upgrade) name='upgrade FirewallFabrik and Firewall Builder files to the current .fwf format' ;;
+    esac
+    PYTHONPATH=%{buildroot}%{python3_sitelib} help2man --no-info --no-discard-stderr \
+        --include=%{SOURCE1} --name="$name" --version-string=%{version} \
+        --output=%{buildroot}%{_mandir}/man1/$prog.1 %{buildroot}%{_bindir}/$prog
+done
 
 # Split the file list: the gui subpackage owns firewallfabrik/gui, the main
 # package everything else.
@@ -100,9 +124,13 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/%{appid}.desktop
 %{_bindir}/fwf-ipt
 %{_bindir}/fwf-nft
 %{_bindir}/fwf-upgrade
+%{_mandir}/man1/fwf-ipt.1*
+%{_mandir}/man1/fwf-nft.1*
+%{_mandir}/man1/fwf-upgrade.1*
 
 %files gui -f gui.files
 %{_bindir}/fwf
+%{_mandir}/man1/fwf.1*
 %{_datadir}/applications/%{appid}.desktop
 %{_datadir}/icons/hicolor/*/apps/%{appid}.*
 %{_datadir}/mime/packages/%{appid}.xml
