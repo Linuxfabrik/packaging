@@ -56,11 +56,22 @@ jobs:
           git config user.name 'linuxfabrik-automation[bot]'
           git config user.email 'linuxfabrik-automation[bot]@users.noreply.github.com'
 
+          # A package whose upstream cannot be checked fails the run at the end,
+          # after all other packages had their turn; it must not pass as "up to
+          # date" unnoticed.
+          failed=''
           for dir in packages/*/; do
             name="$(basename "$dir")"
 
-            # check-upstream.sh exits 0 only when a newer upstream version exists.
-            if versions="$(bash build/check-upstream.sh "$dir")"; then
+            # check-upstream.sh: 0 newer upstream, 1 up to date or no upstream,
+            # 2 error
+            rc=0
+            versions="$(bash build/check-upstream.sh "$dir")" || rc=$?
+            if [ "$rc" -eq 2 ]; then
+              echo "::error::Could not check the upstream of $name, see the log above."
+              failed="$failed $name"
+            fi
+            if [ "$rc" -eq 0 ]; then
               current="$(echo "$versions" | cut -d' ' -f1)"
               latest="$(echo "$versions" | cut -d' ' -f2)"
               branch="bump/$name-$latest"
@@ -87,3 +98,8 @@ jobs:
               git checkout main
             fi
           done
+
+          if [ -n "$failed" ]; then
+            echo "Upstream check failed for:$failed" >&2
+            exit 1
+          fi
