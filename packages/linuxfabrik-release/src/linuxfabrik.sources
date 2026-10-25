@@ -1,0 +1,13 @@
+Types: deb
+URIs: https://repo.linuxfabrik.ch/@OS@/linuxfabrik
+Suites: @CODENAME@-release
+Components: main
+Signed-By: /usr/share/keyrings/linuxfabrik.gpg
+
+# Packages wait here for 7 days before they move to the release channel.
+Types: deb
+URIs: https://repo.linuxfabrik.ch/@OS@/linuxfabrik
+Suites: @CODENAME@-testing
+Components: main
+Signed-By: /usr/share/keyrings/linuxfabrik.gpg
+Enabled: no

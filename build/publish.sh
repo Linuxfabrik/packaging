@@ -21,7 +21,7 @@
 # Repository layout below PUBLISH_WEBROOT (see GitLab 001/project-big-picture
 # #1252):
 #
-#   RPM: <el|fedora|sles>/<os-version>/<arch>/linuxfabrik/<channel>/
+#   RPM: <el|fedora|sle>/<os-version>/<arch>/linuxfabrik/<channel>/
 #        (packages signed with rpmsign, repodata/repomd.xml signed detached)
 #   DEB: <debian|ubuntu>/linuxfabrik/ with dists/<codename>-<channel>/main
 #        (freight, Release files signed)
@@ -34,6 +34,8 @@
 #   PUBLISH_GPG_PASSPHRASE_FILE  file holding the passphrase of that key
 #
 # Optional environment (defaults in brackets):
+#   PUBLISH_BOOTSTRAP_PACKAGES  [linuxfabrik-release] packages that get a
+#                            stable <name>-latest-<distro> link in the webroot
 #   PUBLISH_FREIGHT_LIB      [/var/lib/freight] the freight libraries go to
 #                            linuxfabrik-debian/ and linuxfabrik-ubuntu/ below it
 #   PUBLISH_GITHUB_REPO      [Linuxfabrik/packaging]
@@ -44,10 +46,12 @@
 #                            already, and the generated freight configuration
 #   PUBLISH_WEBROOT          [/var/www/html/repo.linuxfabrik.ch]
 #
-# Needs: createrepo_c, freight, gh, gpg, jq, rpm-sign, sha256sum.
+# Needs: createrepo_c, dpkg (dpkg-deb), freight, gh, gpg, jq, rpm-sign, sha256sum.
+# The web server must follow symbolic links (bootstrap links, freight's dists/).
 
 set -e -o pipefail -u
 
+PUBLISH_BOOTSTRAP_PACKAGES="${PUBLISH_BOOTSTRAP_PACKAGES:-linuxfabrik-release}"
 PUBLISH_FREIGHT_LIB="${PUBLISH_FREIGHT_LIB:-/var/lib/freight}"
 PUBLISH_GITHUB_REPO="${PUBLISH_GITHUB_REPO:-Linuxfabrik/packaging}"
 PUBLISH_RPM_ARCHES="${PUBLISH_RPM_ARCHES:-aarch64 x86_64}"
@@ -61,7 +65,9 @@ repo_target() {
     case "$1" in
     almalinux-v* | centos-v* | rhel-v* | rocky-v*) echo "el/${1#*-v}" ;;
     fedora-v*) echo "fedora/${1#fedora-v}" ;;
-    sles-v*) echo "sles/${1#sles-v}" ;;
+    # sle, not sles: the same repository serves SLES, SLED and openSUSE Leap
+    # (verified with Leap 15.5 and 16.0), as repo.linuxfabrik.ch/monitoring-plugins/sle/ does
+    sles-v*) echo "sle/${1#sles-v}" ;;
     debian-v11) echo 'debian bullseye' ;;
     debian-v12) echo 'debian bookworm' ;;
     debian-v13) echo 'debian trixie' ;;
@@ -100,7 +106,10 @@ EOF
 # Regenerate the metadata of one RPM repository directory and sign it.
 rpm_update_repo() {
     local dir="$1"
-    createrepo_c --update --quiet "$dir"
+    # gzip, not the zstd default of createrepo_c 1.x: libdnf on EL 8 cannot read
+    # zstd metadata (verified: dnf 4.7 on Rocky 8 aborts with
+    # "Assertion `fp_primary' failed" on a repository built on Rocky 10).
+    createrepo_c --general-compress-type=gz --update --quiet "$dir"
     gpg --armor --batch --detach-sign --yes \
         --local-user "$PUBLISH_GPG_KEY" \
         --passphrase-file "$PUBLISH_GPG_PASSPHRASE_FILE" \
@@ -197,6 +206,65 @@ publish_release() {
     for os in "${!deb_dirty[@]}"; do
         freight-cache --conf="$(freight_conf "$os")"
     done
+
+    if [ "$channel" = 'release' ]; then
+        while read -r distro file; do
+            bootstrap_link "$distro" "$file"
+        done < "$dir.files"
+    fi
+}
+
+# Point the stable bootstrap URL of a package in PUBLISH_BOOTSTRAP_PACKAGES at
+# its newest build in the release channel, e.g.
+#   linuxfabrik-release-latest-el10.noarch.rpm -> el/10/aarch64/linuxfabrik/release/...
+#   linuxfabrik-release-latest-debian13.deb    -> debian/linuxfabrik/pool/trixie-release/...
+# A host without the repository installs the package from there, the way
+# epel-release-latest-10.noarch.rpm works for EPEL.
+bootstrap_link() {
+    local distro="$1" file="$2"
+    local name distro_tag target os codename arch published link
+    local -a arch_dirs
+
+    case "$file" in
+    *.rpm) name="$(rpm --query --queryformat '%{NAME}' --package "$file" 2>/dev/null)" ;;
+    *.deb) name="$(dpkg-deb --field "$file" Package)" ;;
+    esac
+    if [[ " $PUBLISH_BOOTSTRAP_PACKAGES " != *" $name "* ]]; then
+        return 0
+    fi
+
+    case "$distro" in
+    almalinux-v* | centos-v* | rhel-v* | rocky-v*) distro_tag="el${distro#*-v}" ;;
+    sles-v*) distro_tag="sle${distro#sles-v}" ;;
+    ubuntu-v*)
+        distro_tag="${distro#ubuntu-v}"
+        distro_tag="ubuntu${distro_tag:0:2}.${distro_tag:2}"
+        ;;
+    *) distro_tag="${distro/-v/}" ;;
+    esac
+
+    target="$(repo_target "$distro")"
+    case "$file" in
+    *.rpm)
+        arch="$(rpm --query --queryformat '%{ARCH}' --package "$file" 2>/dev/null)"
+        read -r -a arch_dirs <<< "$(rpm_arches "$file")"
+        published="$target/${arch_dirs[0]}/linuxfabrik/release/$(basename "$file")"
+        link="$name-latest-$distro_tag.$arch.rpm"
+        ;;
+    *.deb)
+        read -r os codename <<< "$target"
+        published="$(cd "$PUBLISH_WEBROOT" \
+            && find "$os/linuxfabrik/pool/$codename-release" -name "$(basename "$file")" -print -quit)"
+        link="$name-latest-$distro_tag.deb"
+        ;;
+    esac
+    if [ ! -f "$PUBLISH_WEBROOT/$published" ]; then
+        echo "Cannot link $link: $published is not published" >&2
+        return 1
+    fi
+    # relative, so the link survives a move of the webroot
+    ln --force --no-dereference --symbolic "$published" "$PUBLISH_WEBROOT/$link"
+    echo "$link -> $published"
 }
 
 # Remove the packages of a rejected release from the testing channel.
@@ -248,12 +316,14 @@ main() {
         return 0
     fi
 
+    # Oldest first: a server set up from scratch replays the releases in the
+    # order they happened, so the newest build ends up behind a bootstrap link.
     gh release list \
         --exclude-drafts \
         --json 'isPrerelease,name,tagName' \
         --limit 1000 \
         --repo "$PUBLISH_GITHUB_REPO" \
-        --jq '.[] | "\(.tagName) \(.isPrerelease) \(.name)"' \
+        --jq 'reverse | .[] | "\(.tagName) \(.isPrerelease) \(.name)"' \
         | while read -r tag prerelease name; do
             if [ "$prerelease" = 'true' ] && [[ "$name" == *'(rejected)' ]]; then
                 channel='rejected'

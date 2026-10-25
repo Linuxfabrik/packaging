@@ -199,7 +199,11 @@ PKG_SMOKE_TEST='glances --version'  # run as nobody after installing into a fres
 - `PKG_UPSTREAM_URL`: the GitLab instance, default `https://gitlab.com`.
 
 `PKG_UPSTREAM_TYPE='none'` is for packages without an upstream, such as
-`linuxfabrik-release`; they are rebuilt by changing their package directory.
+`linuxfabrik-release`; they are rebuilt by changing their package directory. Such a
+package keeps its source in the repository and sets `PKG_SOURCE_DIR` (e.g. `src`)
+instead of `PKG_SOURCE_URL`: `create-package.sh` packs that directory into
+`PKG_SOURCE_TARBALL` with a top-level `<name>-<version>/` directory, the way an
+upstream tarball looks, so the recipes need no special case.
 
 The spec uses `%{pkg_version}` / `%{pkg_release}`, injected by `create-rpm.sh`,
 so the version lives only in the manifest. The build iteration is not part of the
@@ -220,7 +224,8 @@ lets the distribution own the interpreter and the dependency stack.
 
 We build one package file per distro and version, never a single universal artifact: RPMs carry
 the distribution's `%{?dist}` tag (`...-1.el10.noarch.rpm`, `...-1.fc44.noarch.rpm`) and DEBs are
-built per suite. Each distro+version is published into its own repository tree, because dependency
+built per suite. SLES defines no `%{dist}`; `create-rpm.sh` sets `.sle15` / `.sle16` there, so
+the builds for both releases do not share a file name. Each distro+version is published into its own repository tree, because dependency
 names and versions differ per release.
 
 A product can therefore only target distributions that ship a recent enough interpreter and
@@ -318,7 +323,11 @@ step, first in the `testing` channel and seven days later in `release`:
    `testing`, release to `release`, rejected prerelease out of `testing` again.
    Before publishing, it verifies every file against its attestation
    (`gh attestation verify`), signs the RPMs and the repository metadata with the
-   Linuxfabrik key and updates the repositories (`createrepo_c`, freight).
+   Linuxfabrik key and updates the repositories (`createrepo_c`, freight). RPM
+   metadata is gzip-compressed, because EL 8 cannot read the zstd default of
+   current `createrepo_c`. For `linuxfabrik-release` it also keeps the bootstrap
+   links `linuxfabrik-release-latest-<distro>.<ext>` in the webroot pointing at the
+   newest build in `release`.
 
 The signing key never leaves the repository server: CI only ever handles unsigned
 packages, and the server pulls instead of GitHub pushing to it. The GitHub releases
@@ -330,10 +339,13 @@ One aggregated Linuxfabrik repository per distribution, the same layout the Pulp
 server will serve later (GitLab `001/project-big-picture` #1252), so client
 configuration does not change when it takes over:
 
-- RPM: `<el|fedora|sles>/<os-version>/<arch>/linuxfabrik/<release|testing>/`. EL
-  covers Rocky, Alma, RHEL and CentOS through `$releasever_major` and `$basearch`.
-  noarch packages go into every arch directory. Packages are signed, and so is
+- RPM: `<el|fedora|sle>/<os-version>/<arch>/linuxfabrik/<release|testing>/`. EL
+  covers Rocky, Alma, RHEL and CentOS; `linuxfabrik-release` writes the EL major
+  version at build time, because EL 8 has no `$releasever_major`, and uses
+  `$basearch` for the arch. noarch packages go into every arch directory. Packages are signed, and so is
   `repodata/repomd.xml`, so clients can set `repo_gpgcheck=1`.
+  `sle` (not `sles`) serves SLES, SLED and openSUSE Leap alike, as the monitoring-plugins
+  repository does; the build containers keep the `sles-v*` names.
 - DEB: `<debian|ubuntu>/linuxfabrik/` with `dists/<codename>-<release|testing>/main`,
   e.g. `deb [signed-by=/usr/share/keyrings/linuxfabrik.gpg] https://repo.linuxfabrik.ch/debian/linuxfabrik trixie-release main`.
   No architecture in the path, apt picks it from the `Release` file
