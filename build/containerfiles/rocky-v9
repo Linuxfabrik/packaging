@@ -1,6 +1,14 @@
 # Don't use Rocky containers from docker.io/library as they are out of date.
 FROM docker.io/rockylinux/rockylinux:9
 
+# Use dl.rockylinux.org, which sits behind the Fastly CDN, instead of the mirrorlist.
+# The mirrorlist hands out single mirrors, and on GitHub's runners some of them
+# delivered BaseOS at 100 kB/s or stalled dnf completely (run 40189467280).
+RUN sed --in-place \
+        --expression='s|^mirrorlist=|#mirrorlist=|' \
+        --expression='s|^#baseurl=http://dl.rockylinux.org|baseurl=https://dl.rockylinux.org|' \
+        /etc/yum.repos.d/[Rr]ocky*.repo
+
 # Install Python 3
 RUN dnf --assumeyes install --nodocs gcc python3-pip python3-devel && \
     dnf clean all
