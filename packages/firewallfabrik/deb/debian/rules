@@ -1,5 +1,7 @@
 #!/usr/bin/make -f
 
+include /usr/share/dpkg/pkg-info.mk
+
 APPID := ch.linuxfabrik.firewallfabrik
 CORE := debian/linuxfabrik-firewallfabrik
 GUI := debian/linuxfabrik-firewallfabrik-gui
@@ -12,6 +14,10 @@ override_dh_auto_configure:
 	# Older setuptools predates PEP 639: drop `license-files` (debian/copyright
 	# covers the licenses) and the `setuptools >= 77.0.3` floor it needs.
 	sed -i '/^license-files = /d; s/"setuptools >= 77.0.3"/"setuptools"/' pyproject.toml
+	# help2man runs in the C locale and garbles the em dash of the `fwf --help`
+	# text in the man page; same as the RPM spec. Upstream is asked to use a
+	# plain hyphen; until then, replace it.
+	sed -i 's/FirewallFabrik \xe2\x80\x94 firewall/FirewallFabrik - firewall/' src/firewallfabrik/gui/app.py
 	dh_auto_configure
 
 override_dh_auto_test:
@@ -20,6 +26,24 @@ override_dh_auto_test:
 
 override_dh_auto_install:
 	dh_auto_install --destdir=$(TMP)
+	# Man pages from --help, with a pointer to the full documentation. Generated
+	# before the split below: afterwards firewallfabrik/gui sits in another tree
+	# than the rest of the package, and `fwf --help` could not import it.
+	set -e; \
+	site="$$(cd $(TMP) && find . -type d -path '*-packages/firewallfabrik' | head -n 1 | xargs dirname)"; \
+	mkdir -p $(TMP)/usr/share/man/man1; \
+	for prog in fwf fwf-ipt fwf-nft fwf-upgrade; do \
+		case "$$prog" in \
+		fwf) name='Qt GUI to manage iptables and nftables firewall policies' ;; \
+		fwf-ipt) name='compile FirewallFabrik firewall policies into iptables scripts' ;; \
+		fwf-nft) name='compile FirewallFabrik firewall policies into nftables scripts' ;; \
+		fwf-upgrade) name='upgrade FirewallFabrik and Firewall Builder files to the current .fwf format' ;; \
+		esac; \
+		PYTHONPATH=$(TMP)/$$site help2man --no-info --no-discard-stderr \
+			--include=debian/firewallfabrik.h2m --name="$$name" \
+			--version-string=$(DEB_VERSION_UPSTREAM) \
+			--output=$(TMP)/usr/share/man/man1/$$prog.1 $(TMP)/usr/bin/$$prog; \
+	done
 	# Split the installed tree: the gui package owns firewallfabrik/gui and fwf,
 	# the core package everything else. pybuild picks the site directory, so
 	# look it up instead of assuming one.
@@ -30,7 +54,10 @@ override_dh_auto_install:
 	mv $(TMP)/$$site/firewallfabrik/gui $(GUI)/$$site/firewallfabrik/; \
 	mv $(TMP)/$$site/* $(CORE)/$$site/; \
 	mv $(TMP)/usr/bin/fwf $(GUI)/usr/bin/; \
-	mv $(TMP)/usr/bin/* $(CORE)/usr/bin/
+	mv $(TMP)/usr/bin/* $(CORE)/usr/bin/; \
+	mkdir -p $(GUI)/usr/share/man/man1 $(CORE)/usr/share/man/man1; \
+	mv $(TMP)/usr/share/man/man1/fwf.1 $(GUI)/usr/share/man/man1/; \
+	mv $(TMP)/usr/share/man/man1/*.1 $(CORE)/usr/share/man/man1/
 	install -D -m 0644 assets/$(APPID).desktop $(GUI)/usr/share/applications/$(APPID).desktop
 	install -D -m 0644 assets/$(APPID).xml $(GUI)/usr/share/mime/packages/$(APPID).xml
 	install -D -m 0644 src/firewallfabrik/gui/ui/Icons/firewallfabrik.svg \
