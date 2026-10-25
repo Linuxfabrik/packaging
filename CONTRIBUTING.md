@@ -386,9 +386,10 @@ pre-commit, CodeQL, Scorecard, dependency review) keep their common names.
    links `linuxfabrik-release-latest-<distro>.<ext>` in the webroot pointing at the
    newest build in `release`. At the end of every run it renders the start page
    `index.html` from the published contents: setup command and packages per distro
-   (release and testing), channels, signing key. It reuses the server's
-   `/assets/style.css` and logo, and writes its own overrides to `index.css`
-   instead of an inline `<style>`, which the CSP of the proxy in front blocks.
+   (release and testing), an overview of all packages, channels, signing key.
+   Its stylesheet goes to `index.css` instead of an inline `<style>`, which the
+   CSP of the proxy in front blocks; the directory listings keep
+   `/assets/style.css`.
 
 The signing key never leaves the repository server: CI only ever handles unsigned
 packages, and the server pulls instead of GitHub pushing to it. The GitHub releases
