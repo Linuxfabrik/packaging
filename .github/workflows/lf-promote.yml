@@ -1,4 +1,4 @@
-name: 'Linuxfabrik: Promote releases'
+name: 'Linuxfabrik: 50 - Promote releases'
 
 # A package lands in the `testing` channel as a GitHub prerelease (lf-release.yml).
 # This workflow promotes every prerelease that is at least 7 days old to a full
