@@ -384,7 +384,10 @@ pre-commit, CodeQL, Scorecard, dependency review) keep their common names.
    metadata is gzip-compressed, because EL 8 cannot read the zstd default of
    current `createrepo_c`. For `linuxfabrik-release` it also keeps the bootstrap
    links `linuxfabrik-release-latest-<distro>.<ext>` in the webroot pointing at the
-   newest build in `release`.
+   newest build in `release`. At the end of every run it renders the start page
+   `index.html` from the published contents: setup command and packages per distro
+   (release and testing), channels, signing key. It reuses the server's
+   `/assets/style.css` and logo.
 
 The signing key never leaves the repository server: CI only ever handles unsigned
 packages, and the server pulls instead of GitHub pushing to it. The GitHub releases

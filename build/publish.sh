@@ -34,6 +34,8 @@
 #   PUBLISH_GPG_PASSPHRASE_FILE  file holding the passphrase of that key
 #
 # Optional environment (defaults in brackets):
+#   PUBLISH_BASE_URL         [https://repo.linuxfabrik.ch] public URL of the
+#                            webroot, for the commands on the start page
 #   PUBLISH_BOOTSTRAP_PACKAGES  [linuxfabrik-release] packages that get a
 #                            stable <name>-latest-<distro> link in the webroot
 #   PUBLISH_FREIGHT_LIB      [/var/lib/freight] the freight libraries go to
@@ -53,6 +55,7 @@
 
 set -e -o pipefail -u
 
+PUBLISH_BASE_URL="${PUBLISH_BASE_URL:-https://repo.linuxfabrik.ch}"
 PUBLISH_BOOTSTRAP_PACKAGES="${PUBLISH_BOOTSTRAP_PACKAGES:-linuxfabrik-release}"
 PUBLISH_FREIGHT_LIB="${PUBLISH_FREIGHT_LIB:-/var/lib/freight}"
 PUBLISH_GITHUB_REPO="${PUBLISH_GITHUB_REPO:-Linuxfabrik/packaging}"
@@ -60,6 +63,19 @@ PUBLISH_RPM_ARCHES="${PUBLISH_RPM_ARCHES:-aarch64 x86_64}"
 PUBLISH_SIGNER_WORKFLOW="${PUBLISH_SIGNER_WORKFLOW:-$PUBLISH_GITHUB_REPO/.github/workflows/lf-release.yml}"
 PUBLISH_STATE_DIR="${PUBLISH_STATE_DIR:-/var/lib/linuxfabrik-publish}"
 PUBLISH_WEBROOT="${PUBLISH_WEBROOT:-/var/www/html/repo.linuxfabrik.ch}"
+
+# Codename -> "<name> <version>" for the start page.
+deb_release_name() {
+    case "$1" in
+    bookworm) echo 'Debian 12' ;;
+    trixie) echo 'Debian 13' ;;
+    forky) echo 'Debian 14' ;;
+    jammy) echo 'Ubuntu 22.04' ;;
+    noble) echo 'Ubuntu 24.04' ;;
+    resolute) echo 'Ubuntu 26.04' ;;
+    *) echo "$1" ;;
+    esac
+}
 
 # Distro name as used by the build (build/containerfiles/) -> repository path.
 # RPM targets map to "<os>/<os-version>", DEB targets to "<os> <codename>".
@@ -303,6 +319,206 @@ reject_release() {
     done
 }
 
+# Print the newest version of every package in one channel, "<name> <version>"
+# per line, without the dist tag (.el10, .fc44, .sle16) or the distro suffix
+# (+debian13). $2 is an RPM repository directory or a freight Packages file.
+channel_packages() {
+    local kind="$1" path="$2" file
+
+    case "$kind" in
+    rpm)
+        for file in "$path"/*.rpm; do
+            [ -e "$file" ] || continue
+            rpm --query --queryformat '%{NAME} %{VERSION}-%{RELEASE}\n' --package "$file" 2>/dev/null
+        done | sed -E 's/\.(el|fc|sle)[0-9]+$//'
+        ;;
+    deb)
+        [ -r "$path" ] || return 0
+        awk '/^Package:/ {p = $2} /^Version:/ {print p, $2}' "$path" \
+            | sed -E 's/\+(debian|ubuntu)[0-9.]+$//'
+        ;;
+    esac | sort -k1,1 -k2,2V | awk '{v[$1] = $2} END {for (p in v) print p, v[p]}' | sort
+}
+
+# Print one <details> block of the start page: how to set up the repository on
+# a distro, and which packages it has in release and testing.
+render_distro() {
+    local label="$1" kind="$2" tag="$3" release="$4" testing="$5"
+    local url="$PUBLISH_BASE_URL" bootstrap name rel tst count
+
+    case "$kind" in
+    deb) bootstrap="linuxfabrik-release-latest-$tag.deb" ;;
+    *) bootstrap="linuxfabrik-release-latest-$tag.noarch.rpm" ;;
+    esac
+
+    # names of all packages in either channel, except the setup package itself
+    local names
+    names="$( { channel_packages "${kind%%-*}" "$release"; channel_packages "${kind%%-*}" "$testing"; } \
+        | awk '{print $1}' | grep -v -x -F "$PUBLISH_BOOTSTRAP_PACKAGES" | sort -u || true)"
+    count="$(grep -c . <<< "$names" || true)"
+
+    case "$count" in
+    0) count='no packages yet' ;;
+    1) count='1 package' ;;
+    *) count="$count packages" ;;
+    esac
+    echo '<details>'
+    echo "<summary><strong>$label</strong> &middot; $count</summary>"
+    if [ -e "$PUBLISH_WEBROOT/$bootstrap" ]; then
+        echo '<pre>'
+        case "$kind" in
+        rpm-dnf) echo "sudo dnf install $url/$bootstrap" ;;
+        rpm-zypper)
+            echo "sudo rpm --import $url/linuxfabrik.key"
+            echo "sudo zypper install $url/$bootstrap"
+            ;;
+        deb)
+            echo "curl --fail --location --remote-name $url/$bootstrap"
+            echo "sudo apt install ./$bootstrap"
+            echo 'sudo apt update'
+            ;;
+        esac
+        echo '</pre>'
+    else
+        echo "<p class=\"warning\">$PUBLISH_BOOTSTRAP_PACKAGES is not released for this distro yet.</p>"
+    fi
+    if [ -n "$names" ]; then
+        echo '<div class="markdown-body"><table>'
+        echo '<tr><th>Package</th><th>release</th><th>testing</th></tr>'
+        while read -r name; do
+            rel="$(channel_packages "${kind%%-*}" "$release" | awk -v n="$name" '$1 == n {print $2}')"
+            tst="$(channel_packages "${kind%%-*}" "$testing" | awk -v n="$name" '$1 == n {print $2}')"
+            # testing only matters where it is ahead of release
+            [ "$tst" = "$rel" ] && tst=''
+            echo "<tr><td>$name</td><td>${rel:-&ndash;}</td><td>${tst:-&ndash;}</td></tr>"
+        done <<< "$names"
+        echo '</table></div>'
+    fi
+    echo '</details>'
+}
+
+# Write the start page of the webroot from what is published right now: setup
+# commands and packages per distro, channels, signing key. Replaces the
+# directory listing as the landing page; the directories stay browsable.
+render_index() {
+    local page="$PUBLISH_WEBROOT/index.html" tmp dir os version arch dist codename
+    local fingerprint
+    tmp="$(mktemp "$PUBLISH_WEBROOT/.index.html.XXXXXX")"
+    fingerprint="$(sed -E 's/(.{4})/\1 /g; s/ $//' <<< "$PUBLISH_GPG_KEY")"
+
+    {
+        cat <<EOF
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Linuxfabrik Package Repository</title>
+<link rel="stylesheet" href="/assets/style.css" type="text/css">
+<!-- style.css shows code as blocks, which breaks sentences apart -->
+<style>p code { display: inline; }</style>
+</head>
+<body>
+<div id="header">
+  <h1><a href="$PUBLISH_BASE_URL"><img src="/assets/linuxfabrik-logo.svg" alt="Linuxfabrik" class="inline" width="200" height="127"></a> Package Repository</h1>
+</div>
+
+<p>Signed RPM and DEB packages of Linuxfabrik's own software and of third-party software
+that the distributions do not ship, built from the upstream sources in
+<a href="https://github.com/$PUBLISH_GITHUB_REPO">$PUBLISH_GITHUB_REPO</a>.
+One repository per distribution, for x86_64 and aarch64.</p>
+
+<h2>Set up the repository</h2>
+<p><code>linuxfabrik-release</code> configures the repository and installs the signing key,
+the way <code>epel-release</code> does for EPEL. Pick your distribution:</p>
+EOF
+
+        for dir in $(find "$PUBLISH_WEBROOT/el" "$PUBLISH_WEBROOT/fedora" "$PUBLISH_WEBROOT/sle" \
+            -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort -V); do
+            os="$(basename "$(dirname "$dir")")"
+            version="$(basename "$dir")"
+            arch=''
+            for arch in x86_64 aarch64; do
+                [ -d "$dir/$arch/linuxfabrik" ] && break
+            done
+            case "$os" in
+            el) render_distro "RHEL $version and compatibles" rpm-dnf "el$version" \
+                "$dir/$arch/linuxfabrik/release" "$dir/$arch/linuxfabrik/testing" ;;
+            fedora) render_distro "Fedora $version" rpm-dnf "fedora$version" \
+                "$dir/$arch/linuxfabrik/release" "$dir/$arch/linuxfabrik/testing" ;;
+            sle) render_distro "SLES and openSUSE Leap $version" rpm-zypper "sle$version" \
+                "$dir/$arch/linuxfabrik/release" "$dir/$arch/linuxfabrik/testing" ;;
+            esac
+        done
+
+        for os in debian ubuntu; do
+            dist="$PUBLISH_WEBROOT/$os/linuxfabrik/dists"
+            [ -d "$dist" ] || continue
+            # freight keeps <suite>-<timestamp> directories next to the <suite> links
+            for codename in $(find "$dist" -mindepth 1 -maxdepth 1 -printf '%f\n' \
+                | sed -n -E 's/^([a-z]+)-(release|testing)$/\1/p' | sort -u); do
+                version="$(deb_release_name "$codename")"
+                render_distro "$version ($codename)" deb "$(tr -d ' ' <<< "${version,,}")" \
+                    "$dist/$codename-release/main/binary-amd64/Packages" \
+                    "$dist/$codename-testing/main/binary-amd64/Packages"
+            done
+        done
+
+        cat <<EOF
+
+<p>Derivatives use the repository of their base: Rocky Linux, AlmaLinux, Oracle Linux and
+CentOS Stream the RHEL one, Linux Mint and other Ubuntu-based distributions the Ubuntu one
+of their base release, LMDE the Debian one.</p>
+<p>On RHEL and compatibles, some packages depend on EPEL and the CRB repository.</p>
+
+<h2>Channels</h2>
+<p>New versions land in <strong>testing</strong> first and move to <strong>release</strong>
+after seven days. <code>linuxfabrik-release</code> enables release and configures testing,
+disabled. To try new versions early, enable testing:</p>
+<pre>
+sudo dnf config-manager --set-enabled linuxfabrik-testing        # RHEL 8, 9 and 10
+sudo dnf config-manager setopt linuxfabrik-testing.enabled=1     # Fedora
+sudo zypper modifyrepo --enable linuxfabrik-testing              # SLES, openSUSE Leap
+</pre>
+<p>On Debian and Ubuntu, set <code>Enabled: yes</code> for the testing entry in
+<code>/etc/apt/sources.list.d/linuxfabrik.sources</code>.</p>
+
+<h2>Signing key</h2>
+<p>Packages and repository metadata are signed with
+<a href="$PUBLISH_BASE_URL/linuxfabrik.key">linuxfabrik.key</a>, fingerprint
+<code>$fingerprint</code>. <code>linuxfabrik-release</code> installs it.</p>
+
+<h2>How the packages are built</h2>
+<p>From the upstream source, with the distribution's own toolchain and dependencies, on
+GitHub Actions, and smoke-tested on every target before release. Each build is published
+with a build provenance attestation, which this server verifies before it signs and
+publishes the package. Details:
+<a href="https://github.com/$PUBLISH_GITHUB_REPO/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>,
+all builds: <a href="https://github.com/$PUBLISH_GITHUB_REPO/releases">GitHub releases</a>.</p>
+
+<h2>Other repositories on this server</h2>
+<ul>
+<li><a href="/monitoring-plugins/">monitoring-plugins/</a>: the
+<a href="https://github.com/Linuxfabrik/monitoring-plugins">Linuxfabrik Monitoring Plugins</a>,
+installed with <a href="/install-monitoring-plugins">install-monitoring-plugins</a></li>
+<li><a href="/exoscale/cli/">exoscale/cli/</a>: RPMs from the GitHub releases of
+<a href="https://github.com/exoscale/cli">Exoscale's CLI</a></li>
+<li><a href="/mydumper/">mydumper/</a>: RPMs from the GitHub releases of
+<a href="https://github.com/mydumper/mydumper">MyDumper</a></li>
+</ul>
+<p>Browse the repositories directly: <a href="/el/">el/</a>, <a href="/fedora/">fedora/</a>,
+<a href="/sle/">sle/</a>, <a href="/debian/">debian/</a>, <a href="/ubuntu/">ubuntu/</a>.</p>
+
+<hr>
+<address>Generated from the repository contents on $(date --utc '+%Y-%m-%d %H:%M UTC').</address>
+</body>
+</html>
+EOF
+    } > "$tmp"
+    chmod 0644 "$tmp"
+    mv "$tmp" "$page"
+}
+
 # freight hard-links the packages from its library into the webroot. If the two
 # are on different mounts, ln fails with EXDEV and freight silently copies
 # instead; at the end of every freight-cache it then deletes all pool files with
@@ -374,6 +590,8 @@ main() {
             touch "$done_dir/$tag.$channel"
             rm --recursive --force "$workdir" "$workdir.files"
         done
+
+    render_index
 }
 
 main "$@"
