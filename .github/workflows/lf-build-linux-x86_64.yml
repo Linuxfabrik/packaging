@@ -67,6 +67,11 @@ jobs:
     needs: 'prepare-matrix'
     runs-on:
       - 'ubuntu-24.04'
+    # A build plus smoke test takes a few minutes. Without a limit, a stalled
+    # package mirror keeps the job for GitHub's 6 hours, and since lf-release.yml
+    # runs one release at a time, every later release waits as well (seen with
+    # dnf in a rocky-v8 smoke test, run 40189467280).
+    timeout-minutes: 30
     strategy:
       matrix:
         distro: '${{ fromJson(needs.prepare-matrix.outputs.distro_list) }}'
