@@ -18,16 +18,31 @@
 
 set -e -o pipefail -u -x
 
+# podman names the architectures the OCI way. Passing it explicitly builds and
+# runs the image for PKG_ARCH: natively on a matching host (the GitHub runners),
+# emulated through qemu-user elsewhere, e.g. aarch64 on an x86_64 workstation.
+case "$PKG_ARCH" in
+aarch64) oci_arch='arm64' ;;
+x86_64) oci_arch='amd64' ;;
+*)
+    echo "Unsupported PKG_ARCH: $PKG_ARCH" >&2
+    exit 1
+    ;;
+esac
+export PKG_OCI_ARCH="$oci_arch"
+
 for distro in $PKG_TARGET_DISTROS; do
     mkdir --parents "$PKG_DIR_PACKAGED/$distro"
 
     echo "✅ Build container image for $distro"
     podman build \
+        --arch "$oci_arch" \
         --file "$PKG_DIR_REPO/build/containerfiles/$distro" \
-        --tag "packaging-build-$distro"
+        --tag "packaging-build-$distro-$PKG_ARCH"
 
     echo "✅ Build $PKG_NAME on $distro"
     podman run \
+        --arch "$oci_arch" \
         --env=PKG_NAME="$PKG_NAME" \
         --env=PKG_ARCH="$PKG_ARCH" \
         --env=PKG_PACKAGE_ITERATION="$PKG_PACKAGE_ITERATION" \
@@ -37,7 +52,7 @@ for distro in $PKG_TARGET_DISTROS; do
         --mount type=bind,source="$PKG_DIR_PACKAGED/$distro",destination=/packaged,relabel=private \
         --mount type=bind,source="$PKG_DIR_REPO",destination=/repo,relabel=shared,ro=true \
         --rm \
-        "packaging-build-$distro" \
+        "packaging-build-$distro-$PKG_ARCH" \
         /bin/bash /repo/build/create-package.sh
 
     bash "$PKG_DIR_REPO/build/smoke-test-package.sh" "$distro"

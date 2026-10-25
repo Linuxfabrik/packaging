@@ -117,7 +117,7 @@ PKG_DIR_PACKAGED="$(pwd)/packaged" \
 bash build/matrix-package.sh
 ```
 
-Built packages are collected under `packaged/<distro>/`. Each one is then installed into a fresh container of its distro and smoke-tested.
+Built packages are collected under `packaged/<distro>/`. Each one is then installed into a fresh container of its distro and smoke-tested. With `PKG_ARCH=aarch64` the same runs for arm64, emulated through qemu-user-static on an x86_64 machine.
 
 
 ## Support the Project
