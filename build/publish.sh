@@ -380,10 +380,10 @@ render_distro() {
         esac
         echo '</pre>'
     else
-        echo "<p class=\"warning\">$PUBLISH_BOOTSTRAP_PACKAGES is not released for this distro yet.</p>"
+        echo "<p class=\"note\">$PUBLISH_BOOTSTRAP_PACKAGES is not released for this distro yet.</p>"
     fi
     if [ -n "$names" ]; then
-        echo '<div class="markdown-body"><table>'
+        echo '<div class="table-wrap"><table>'
         echo '<tr><th>Package</th><th>release</th><th>testing</th></tr>'
         while read -r name; do
             rel="$(channel_packages "${kind%%-*}" "$release" | awk -v n="$name" '$1 == n {print $2}')"
@@ -391,10 +391,66 @@ render_distro() {
             # testing only matters where it is ahead of release
             [ "$tst" = "$rel" ] && tst=''
             echo "<tr><td>$name</td><td>${rel:-&ndash;}</td><td>${tst:-&ndash;}</td></tr>"
+            # for the overview table that render_index prints after all distros
+            printf '%s\t%s\t%s\t%s\n' "$label" "$name" "$rel" "$tst" >> "$RENDER_OVERVIEW"
         done <<< "$names"
         echo '</table></div>'
     fi
     echo '</details>'
+}
+
+# Stylesheet of the start page. A file and not an inline <style>, because the
+# proxy in front of this server only allows same-origin stylesheets (CSP
+# style-src 'self'). The directory listings keep /assets/style.css.
+render_css() {
+    cat <<'EOF'
+a { color: #c25000; text-decoration: none; }
+a:hover { text-decoration: underline; }
+body { color: #222; font-family: system-ui, sans-serif; line-height: 1.5; margin: 2em auto; max-width: 56em; padding: 0 1em; }
+code { background: #f4f4f4; border-radius: 3px; padding: .1em .3em; }
+details { border: 1px solid #ddd; border-radius: 6px; margin: .6em 0; padding: .2em .8em; }
+details[open] { padding-bottom: .8em; }
+footer { border-top: 1px solid #ddd; color: #777; font-size: .85em; margin-top: 3em; padding-top: 1em; }
+h1 { font-size: 1.6em; margin: 0; }
+h2 { border-bottom: 2px solid #ff6600; margin-top: 2em; padding-bottom: .2em; }
+header { align-items: center; display: flex; flex-wrap: wrap; gap: 1em; margin-bottom: 1.5em; }
+header img { height: 60px; width: auto; }
+pre { background: #f4f4f4; border-radius: 4px; overflow-x: auto; padding: .8em; }
+summary { cursor: pointer; padding: .4em 0; }
+table { border-collapse: collapse; margin: .6em 0; }
+td, th { border: 1px solid #ddd; padding: .3em .7em; text-align: left; }
+th { background: #f4f4f4; }
+.fingerprint { white-space: nowrap; }
+.note { color: #555; font-size: .9em; }
+.table-wrap { overflow-x: auto; }
+EOF
+}
+
+# Overview of all packages per distro, from the lines render_distro collected:
+# label, package, release version, testing version (tab-separated).
+render_overview() {
+    local file="$1" label name packages cell
+    [ -s "$file" ] || return 0
+    packages="$(cut --fields=2 "$file" | sort -u)"
+    echo '<div class="table-wrap"><table>'
+    printf '<tr><th>Distribution</th>'
+    while read -r name; do printf '<th>%s</th>' "$name"; done <<< "$packages"
+    echo '</tr>'
+    cut --fields=1 "$file" | awk '!seen[$0]++' | while read -r label; do
+        printf '<tr><td>%s</td>' "$label"
+        while read -r name; do
+            # awk and not `read`, which merges the empty release field of a
+            # package that is in testing only with its neighbours
+            cell="$(awk -F '\t' -v l="$label" -v n="$name" '$1 == l && $2 == n {
+                c = $3
+                if ($4 != "") c = (c != "" ? c "<br>" : "") "<span class=\"note\">" $4 " (testing)</span>"
+                print c
+            }' "$file")"
+            printf '<td>%s</td>' "${cell:-&ndash;}"
+        done <<< "$packages"
+        echo '</tr>'
+    done
+    echo '</table></div>'
 }
 
 # Write the start page of the webroot from what is published right now: setup
@@ -403,15 +459,13 @@ render_distro() {
 render_index() {
     local page="$PUBLISH_WEBROOT/index.html" tmp dir os version arch dist codename
     local fingerprint
-    # style.css shows code as blocks, which breaks sentences apart. The override
-    # is a file of its own, because the proxy in front of this server only
-    # allows same-origin stylesheets (CSP style-src 'self'), no inline <style>.
     tmp="$(mktemp "$PUBLISH_WEBROOT/.index.css.XXXXXX")"
-    echo 'p code { display: inline; }' > "$tmp"
+    render_css > "$tmp"
     chmod 0644 "$tmp"
     mv "$tmp" "$PUBLISH_WEBROOT/index.css"
 
     tmp="$(mktemp "$PUBLISH_WEBROOT/.index.html.XXXXXX")"
+    RENDER_OVERVIEW="$(mktemp)"
     fingerprint="$(sed -E 's/(.{4})/\1 /g; s/ $//' <<< "$PUBLISH_GPG_KEY")"
 
     {
@@ -422,13 +476,13 @@ render_index() {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Linuxfabrik Package Repository</title>
-<link rel="stylesheet" href="/assets/style.css" type="text/css">
 <link rel="stylesheet" href="/index.css" type="text/css">
 </head>
 <body>
-<div id="header">
-  <h1><a href="$PUBLISH_BASE_URL"><img src="/assets/linuxfabrik-logo.svg" alt="Linuxfabrik" class="inline" width="200" height="127"></a> Package Repository</h1>
-</div>
+<header>
+<a href="https://www.linuxfabrik.ch/"><img src="/assets/linuxfabrik-logo.svg" alt="Linuxfabrik" width="200" height="127"></a>
+<h1>Package Repository</h1>
+</header>
 
 <p>Signed RPM and DEB packages of Linuxfabrik's own software and of third-party software
 that the distributions do not ship, built from the upstream sources in
@@ -478,6 +532,12 @@ CentOS Stream the RHEL one, Linux Mint and other Ubuntu-based distributions the 
 of their base release, LMDE the Debian one.</p>
 <p>On RHEL and compatibles, some packages depend on EPEL and the CRB repository.</p>
 
+<h2>Packages</h2>
+EOF
+        render_overview "$RENDER_OVERVIEW"
+
+        cat <<EOF
+
 <h2>Channels</h2>
 <p>New versions land in <strong>testing</strong> first and move to <strong>release</strong>
 after seven days. <code>linuxfabrik-release</code> enables release and configures testing,
@@ -489,11 +549,6 @@ sudo zypper modifyrepo --enable linuxfabrik-testing              # SLES, openSUS
 </pre>
 <p>On Debian and Ubuntu, set <code>Enabled: yes</code> for the testing entry in
 <code>/etc/apt/sources.list.d/linuxfabrik.sources</code>.</p>
-
-<h2>Signing key</h2>
-<p>Packages and repository metadata are signed with
-<a href="$PUBLISH_BASE_URL/linuxfabrik.key">linuxfabrik.key</a>, fingerprint
-<code>$fingerprint</code>. <code>linuxfabrik-release</code> installs it.</p>
 
 <h2>How the packages are built</h2>
 <p>From the upstream source, with the distribution's own toolchain and dependencies, on
@@ -518,12 +573,20 @@ installed with <a href="/install-monitoring-plugins">install-monitoring-plugins<
 <p>Browse the repositories directly: <a href="/el/">el/</a>, <a href="/fedora/">fedora/</a>,
 <a href="/sle/">sle/</a>, <a href="/debian/">debian/</a>, <a href="/ubuntu/">ubuntu/</a>.</p>
 
-<hr>
-<address>Generated from the repository contents on $(date --utc '+%Y-%m-%d %H:%M UTC').</address>
+<footer>
+<a href="$PUBLISH_BASE_URL/linuxfabrik.key">linuxfabrik.key</a> &middot; fingerprint
+<code class="fingerprint">$fingerprint</code> &middot; one key for packages and repository
+metadata, installed by <code>linuxfabrik-release</code>.<br>
+Generated from the repository contents on $(date --utc '+%Y-%m-%d %H:%M UTC'), refreshed
+after every publish run.<br>
+<a href="https://www.linuxfabrik.ch/">linuxfabrik.ch</a> &middot;
+<a href="https://github.com/$PUBLISH_GITHUB_REPO">GitHub</a>
+</footer>
 </body>
 </html>
 EOF
     } > "$tmp"
+    rm -f "$RENDER_OVERVIEW"
     chmod 0644 "$tmp"
     mv "$tmp" "$page"
 }
