@@ -404,6 +404,10 @@ in short, the server needs:
 - a read-only GitHub token in `GH_TOKEN`, for the API and `gh attestation verify`
 - a web server that serves `PUBLISH_WEBROOT` and follows symbolic links (bootstrap links,
   freight's `dists/`)
+- `PUBLISH_FREIGHT_LIB` and `PUBLISH_WEBROOT` on one mount: freight hard-links its library into
+  the webroot, and where that fails, it copies and later deletes the pool files of earlier
+  releases. systemd's `ReadWritePaths=` makes every listed path its own bind mount, so list a
+  common parent such as `/var`. `publish.sh` checks this at start and refuses to run otherwise.
 - a systemd timer that runs the script; it locks itself against overlapping runs
 
 ### linuxfabrik-release
