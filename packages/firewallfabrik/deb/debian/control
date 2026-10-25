@@ -1,0 +1,50 @@
+Source: firewallfabrik
+Maintainer: Linuxfabrik GmbH <info@linuxfabrik.ch>
+Section: admin
+Priority: optional
+Standards-Version: 4.6.2
+Homepage: https://github.com/Linuxfabrik/firewallfabrik
+Rules-Requires-Root: no
+Build-Depends: debhelper-compat (= 13),
+               desktop-file-utils,
+               dh-python,
+               pybuild-plugin-pyproject,
+               pyside6-tools,
+               python3-all,
+               python3-setuptools
+
+Package: linuxfabrik-firewallfabrik
+Architecture: all
+Depends: ${misc:Depends},
+         ${python3:Depends}
+# The FirewallFabrik packages of mirror.plustech.de ship everything, including
+# /usr/bin/fwf*, as one package named firewallfabrik.
+Conflicts: firewallfabrik
+Replaces: firewallfabrik
+Description: firewall policy compiler for iptables and nftables
+ FirewallFabrik manages iptables and nftables policies for many Linux
+ firewalls from one central policy database with reusable objects, and
+ compiles them into deployment-ready shell scripts. It reads Firewall Builder
+ (fwbuilder) files and continues its approach with a modern code base.
+ .
+ This package contains the core and the command line compilers fwf-ipt and
+ fwf-nft. The GUI is in linuxfabrik-firewallfabrik-gui.
+
+Package: linuxfabrik-firewallfabrik-gui
+Architecture: all
+Depends: ${misc:Depends},
+         ${python3:Depends},
+         hicolor-icon-theme,
+         linuxfabrik-firewallfabrik (= ${binary:Version}),
+         python3-pyside6.qtcore (>= 6.8),
+         python3-pyside6.qtgui (>= 6.8),
+         python3-pyside6.qtuitools (>= 6.8),
+         python3-pyside6.qtwidgets (>= 6.8)
+Conflicts: firewallfabrik
+Replaces: firewallfabrik
+Description: Qt GUI of FirewallFabrik
+ FirewallFabrik manages iptables and nftables policies for many Linux
+ firewalls from one central policy database with reusable objects, and
+ compiles them into deployment-ready shell scripts.
+ .
+ This package contains the Qt GUI, fwf.
