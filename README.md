@@ -70,7 +70,7 @@ sudo apt update
 
 Then install packages as usual, e.g. `sudo dnf install glances`. On RHEL and compatibles, some packages depend on EPEL; glances, for example, needs `epel-release` and the CRB repository.
 
-New package versions wait in the `testing` channel for 7 days before they reach `release`. To try them earlier, enable `linuxfabrik-testing` (`dnf config-manager --set-enabled linuxfabrik-testing`, `zypper modifyrepo --enable linuxfabrik-testing`), or on Debian and Ubuntu set `Enabled: yes` for the testing entry in `/etc/apt/sources.list.d/linuxfabrik.sources`.
+New package versions wait in the `testing` channel for 7 days before they reach `release`. To try them earlier, enable `linuxfabrik-testing` (RHEL 8 to 10: `dnf config-manager --set-enabled linuxfabrik-testing`; Fedora: `dnf config-manager setopt linuxfabrik-testing.enabled=1`; SLES and openSUSE Leap: `zypper modifyrepo --enable linuxfabrik-testing`), or on Debian and Ubuntu set `Enabled: yes` for the testing entry in `/etc/apt/sources.list.d/linuxfabrik.sources`.
 
 
 ## Repository layout
