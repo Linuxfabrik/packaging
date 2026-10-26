@@ -565,8 +565,6 @@ own setup.</p>
 <li><a href="/monitoring-plugins/">monitoring-plugins/</a>: the
 <a href="https://github.com/Linuxfabrik/monitoring-plugins">Linuxfabrik Monitoring Plugins</a>,
 installed with <a href="/install-monitoring-plugins">install-monitoring-plugins</a></li>
-<li><a href="/exoscale/cli/">exoscale/cli/</a>: RPMs from the GitHub releases of
-<a href="https://github.com/exoscale/cli">Exoscale's CLI</a></li>
 <li><a href="/mydumper/">mydumper/</a>: RPMs from the GitHub releases of
 <a href="https://github.com/mydumper/mydumper">MyDumper</a></li>
 </ul>
