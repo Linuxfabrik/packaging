@@ -1,0 +1,28 @@
+#!/usr/bin/make -f
+
+include /usr/share/dpkg/pkg-info.mk
+
+%:
+	dh $@
+
+override_dh_auto_clean:
+	# Upstream's Makefile clones exoscale/go.mk from GitHub before any
+	# target, `make clean` included. build-exo.sh needs none of it.
+
+override_dh_auto_build:
+	# create-deb.sh puts the orig tarball next to the source tree
+	bash debian/build-exo.sh $(DEB_VERSION_UPSTREAM) ../exoscale-cli_$(DEB_VERSION_UPSTREAM).orig.tar.gz
+
+override_dh_auto_test:
+	# `make test` would clone exoscale/go.mk as well; the smoke test covers
+	# the installed binary.
+
+override_dh_auto_install:
+	install -D -m 0755 exo debian/exoscale-cli/usr/bin/exo
+	install -d debian/exoscale-cli/usr/share/man/man1
+	install -m 0644 manpage/*.1 debian/exoscale-cli/usr/share/man/man1/
+	install -D -m 0644 bash_completion debian/exoscale-cli/usr/share/bash-completion/completions/exo
+	install -D -m 0644 fish_completion debian/exoscale-cli/usr/share/fish/vendor_completions.d/exo.fish
+	install -D -m 0644 zsh_completion debian/exoscale-cli/usr/share/zsh/vendor-completions/_exo
+	install -d debian/exoscale-cli/usr/share/doc/exoscale-cli
+	cp --recursive vendor-licenses debian/exoscale-cli/usr/share/doc/exoscale-cli/

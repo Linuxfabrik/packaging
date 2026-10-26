@@ -1,0 +1,32 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: exoscale-cli
+Upstream-Contact: Exoscale Support <support@exoscale.com>
+Source: https://github.com/exoscale/cli
+
+Files: *
+Copyright: Exoscale
+License: Apache-2.0
+ On Debian systems, the complete text of the Apache License version 2.0 can be
+ found in "/usr/share/common-licenses/Apache-2.0".
+
+Files: vendor/*
+Copyright: the respective authors of the vendored Go modules, see the license
+ file in each module directory
+License: Apache-2.0 and BSD-2-Clause and BSD-3-Clause and ISC and LGPL-3.0 with linking exception and MIT and MPL-2.0
+ The vendored Go modules are statically linked into exo. Each module carries
+ its own license file under vendor/ in the source package.
+ .
+ On Debian systems, the complete texts of the Apache License version 2.0, the
+ GNU Lesser General Public License version 3 and the Mozilla Public License
+ version 2.0 can be found in "/usr/share/common-licenses/".
+
+Files: debian/*
+Copyright: 2026 Linuxfabrik GmbH <info@linuxfabrik.ch>
+License: Unlicense
+ This is free and unencumbered software released into the public domain.
+ .
+ Anyone is free to copy, modify, publish, use, compile, sell, or distribute
+ this software, either in source code form or as a compiled binary, for any
+ purpose, commercial or non-commercial, and by any means.
+ .
+ For more information, please refer to <https://unlicense.org/>.
