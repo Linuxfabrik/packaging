@@ -1,0 +1,25 @@
+Source: acme.sh
+Maintainer: Linuxfabrik GmbH <info@linuxfabrik.ch>
+Section: web
+Priority: optional
+Standards-Version: 4.6.2
+Homepage: https://github.com/acmesh-official/acme.sh
+Rules-Requires-Root: no
+Build-Depends: debhelper-compat (= 13),
+               help2man
+
+Package: acme.sh
+Architecture: all
+Multi-Arch: foreign
+Depends: ${misc:Depends},
+         curl | wget,
+         openssl
+Recommends: socat
+Description: Pure Unix shell script implementing the ACME client protocol
+ acme.sh issues, renews and deploys certificates from Let's Encrypt, ZeroSSL
+ and other ACME certificate authorities. It is a POSIX shell script with hooks
+ for many DNS providers (dnsapi), deployment targets (deploy) and
+ notification services (notify).
+ .
+ This package turns off the self-upgrade of acme.sh (ACME_PACKAGED); updates
+ come through the package manager.
