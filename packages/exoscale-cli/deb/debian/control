@@ -1,0 +1,19 @@
+Source: exoscale-cli
+Maintainer: Linuxfabrik GmbH <info@linuxfabrik.ch>
+Section: admin
+Priority: optional
+Standards-Version: 4.6.2
+Homepage: https://github.com/exoscale/cli
+Rules-Requires-Root: no
+Build-Depends: ca-certificates,
+               curl,
+               debhelper-compat (= 13)
+
+Package: exoscale-cli
+Architecture: any
+Depends: ${misc:Depends},
+         ${shlibs:Depends}
+Description: command-line tool for the Exoscale cloud
+ exo manages Exoscale resources from the command line: compute instances and
+ instance pools, SKS Kubernetes clusters, DBaaS, DNS, object storage, IAM and
+ more.
