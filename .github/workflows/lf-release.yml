@@ -195,7 +195,7 @@ jobs:
           VERSION: '${{ matrix.version }}-${{ matrix.iteration }}'
         run: |
           gh release create "$TAG" \
-              --notes "Built from $GITHUB_SHA. Published to the \`testing\` channel, promoted to \`release\` after 7 days unless rejected. Promote or reject it now with \`gh workflow run lf-promote.yml --repo $GITHUB_REPOSITORY --field release=$TAG --field action=promote|reject\`." \
+              --notes 'Install from [repo.linuxfabrik.ch](https://repo.linuxfabrik.ch/), which has the setup command per distribution.' \
               --prerelease \
               --repo "$GITHUB_REPOSITORY" \
               --target "$GITHUB_SHA" \
