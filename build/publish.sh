@@ -341,9 +341,10 @@ channel_packages() {
 }
 
 # Print one <details> block of the start page: how to set up the repository on
-# a distro, and which packages it has in release and testing.
+# a distro, and which packages it has in release and testing. family and
+# version head the column of the distro in the overview table.
 render_distro() {
-    local label="$1" kind="$2" tag="$3" release="$4" testing="$5"
+    local label="$1" kind="$2" tag="$3" release="$4" testing="$5" family="$6" version="$7"
     local url="$PUBLISH_BASE_URL" bootstrap name rel tst count
 
     case "$kind" in
@@ -392,7 +393,7 @@ render_distro() {
             [ "$tst" = "$rel" ] && tst=''
             echo "<tr><td>$name</td><td>${rel:-&ndash;}</td><td>${tst:-&ndash;}</td></tr>"
             # for the overview table that render_index prints after all distros
-            printf '%s\t%s\t%s\t%s\n' "$label" "$name" "$rel" "$tst" >> "$RENDER_OVERVIEW"
+            printf '%s\t%s\t%s\t%s\t%s\n' "$family" "$version" "$name" "$rel" "$tst" >> "$RENDER_OVERVIEW"
         done <<< "$names"
         echo '</table></div>'
     fi
@@ -422,32 +423,46 @@ td, th { border: 1px solid #ddd; padding: .3em .7em; text-align: left; }
 th { background: #f4f4f4; }
 .fingerprint { white-space: nowrap; }
 .note { color: #555; font-size: .9em; }
+.overview { font-size: .9em; }
+.overview td, .overview th { padding: .3em .5em; white-space: nowrap; }
+.overview th[colspan] { text-align: center; }
+.overview td:first-child, .overview th[rowspan] { left: 0; position: sticky; }
+.overview td:first-child { background: #fff; }
 .table-wrap { overflow-x: auto; }
 EOF
 }
 
-# Overview of all packages per distro, from the lines render_distro collected:
-# label, package, release version, testing version (tab-separated).
+# Overview of all packages, from the lines render_distro collected: family,
+# version, package, release version, testing version (tab-separated). One row
+# per package and one column per distro, so a new package adds a row and the
+# width stays bounded by the number of distros. The head spans each family over
+# its versions to keep the columns narrow.
 render_overview() {
-    local file="$1" label name packages cell
+    local file="$1" columns family name cell
     [ -s "$file" ] || return 0
-    packages="$(cut --fields=2 "$file" | sort -u)"
-    echo '<div class="table-wrap"><table>'
-    printf '<tr><th>Distribution</th>'
-    while read -r name; do printf '<th>%s</th>' "$name"; done <<< "$packages"
+    # distros in the order render_index printed them
+    columns="$(cut --fields=1,2 "$file" | awk '!seen[$0]++')"
+    echo '<div class="table-wrap"><table class="overview">'
+    printf '<tr><th rowspan="2">Package</th>'
+    cut --fields=1 <<< "$columns" | uniq --count | while read -r count family; do
+        printf '<th colspan="%s">%s</th>' "$count" "$family"
+    done
     echo '</tr>'
-    cut --fields=1 "$file" | awk '!seen[$0]++' | while read -r label; do
-        printf '<tr><td>%s</td>' "$label"
-        while read -r name; do
+    printf '<tr>'
+    cut --fields=2 <<< "$columns" | while read -r version; do printf '<th>%s</th>' "$version"; done
+    echo '</tr>'
+    cut --fields=3 "$file" | sort -u | while read -r name; do
+        printf '<tr><td>%s</td>' "$name"
+        while IFS=$'\t' read -r family version; do
             # awk and not `read`, which merges the empty release field of a
             # package that is in testing only with its neighbours
-            cell="$(awk -F '\t' -v l="$label" -v n="$name" '$1 == l && $2 == n {
-                c = $3
-                if ($4 != "") c = (c != "" ? c "<br>" : "") "<span class=\"note\">" $4 " (testing)</span>"
+            cell="$(awk -F '\t' -v f="$family" -v v="$version" -v n="$name" '$1 == f && $2 == v && $3 == n {
+                c = $4
+                if ($5 != "") c = (c != "" ? c "<br>" : "") "<span class=\"note\">" $5 "<br>(testing)</span>"
                 print c
             }' "$file")"
             printf '<td>%s</td>' "${cell:-&ndash;}"
-        done <<< "$packages"
+        done <<< "$columns"
         echo '</tr>'
     done
     echo '</table></div>'
@@ -504,11 +519,11 @@ EOF
             done
             case "$os" in
             el) render_distro "RHEL $version and compatibles" rpm-dnf "el$version" \
-                "$dir/$arch/linuxfabrik/release" "$dir/$arch/linuxfabrik/testing" ;;
+                "$dir/$arch/linuxfabrik/release" "$dir/$arch/linuxfabrik/testing" RHEL "$version" ;;
             fedora) render_distro "Fedora $version" rpm-dnf "fedora$version" \
-                "$dir/$arch/linuxfabrik/release" "$dir/$arch/linuxfabrik/testing" ;;
+                "$dir/$arch/linuxfabrik/release" "$dir/$arch/linuxfabrik/testing" Fedora "$version" ;;
             sle) render_distro "SLES and openSUSE Leap $version" rpm-zypper "sle$version" \
-                "$dir/$arch/linuxfabrik/release" "$dir/$arch/linuxfabrik/testing" ;;
+                "$dir/$arch/linuxfabrik/release" "$dir/$arch/linuxfabrik/testing" SLES "$version" ;;
             esac
         done
 
@@ -521,7 +536,8 @@ EOF
                 version="$(deb_release_name "$codename")"
                 render_distro "$version ($codename)" deb "$(tr -d ' ' <<< "${version,,}")" \
                     "$dist/$codename-release/main/binary-amd64/Packages" \
-                    "$dist/$codename-testing/main/binary-amd64/Packages"
+                    "$dist/$codename-testing/main/binary-amd64/Packages" \
+                    "${version% *}" "${version#* }"
             done
         done
 
