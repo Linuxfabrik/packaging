@@ -1,0 +1,7 @@
+#!/bin/sh
+# Entry point of the packaged acme.sh. ACME_PACKAGED makes acme.sh refuse
+# --upgrade and --install-online, skip AUTO_UPGRADE in --cron and leave the
+# script out of LE_WORKING_DIR, since the package manager owns the script and
+# its dnsapi, deploy and notify hooks below /usr/share/acme.sh.
+export ACME_PACKAGED=1
+exec /usr/share/acme.sh/acme.sh "$@"

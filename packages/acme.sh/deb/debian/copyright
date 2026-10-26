@@ -1,0 +1,37 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: acme.sh
+Upstream-Contact: Neilpang <www@neilpang.com>
+Source: https://github.com/acmesh-official/acme.sh
+
+Files: *
+Copyright: 2016-2026 Neilpang <www@neilpang.com>
+License: GPL-3
+ This program is free software: you can redistribute it and/or modify it
+ under the terms of the GNU General Public License version 3 as published by
+ the Free Software Foundation.
+ .
+ On Debian systems, the complete text of the GNU General Public License
+ version 3 can be found in "/usr/share/common-licenses/GPL-3".
+
+Files: dnsapi/dns_oci.sh
+Copyright: 2021 Oracle and/or its affiliates
+License: GPL-3
+
+Files: deploy/cleverreach.sh
+ deploy/cpanel_uapi.sh
+ deploy/gcore_cdn.sh
+ deploy/ruckus.sh
+Copyright: 2017-2024 the respective authors named in each file
+License: public-domain
+ These files are in the public domain, as stated in their headers.
+
+Files: debian/*
+Copyright: 2026 Linuxfabrik GmbH <info@linuxfabrik.ch>
+License: Unlicense
+ This is free and unencumbered software released into the public domain.
+ .
+ Anyone is free to copy, modify, publish, use, compile, sell, or distribute
+ this software, either in source code form or as a compiled binary, for any
+ purpose, commercial or non-commercial, and by any means.
+ .
+ For more information, please refer to <https://unlicense.org/>.
