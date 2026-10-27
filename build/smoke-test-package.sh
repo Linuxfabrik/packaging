@@ -21,7 +21,9 @@
 #   PKG_DIR_PACKAGED   absolute path holding the built packages per distro (host)
 #
 # The command in PKG_SMOKE_TEST (from package.conf) runs as the unprivileged user
-# nobody. Without it, the smoke test only checks that the packages install.
+# nobody. Without it, the smoke test only checks that the packages install. The
+# package's files/ directory is mounted read-only at /files, for a smoke test
+# that needs more than a one-liner.
 
 set -e -o pipefail -u -x
 
@@ -34,10 +36,16 @@ container="packaging-smoke-test-$PKG_NAME-$distro"
 # the plain distro image the build container starts from
 image="$(awk '/^FROM / { print $2; exit }' "$PKG_DIR_REPO/build/containerfiles/$distro")"
 
+files_mount=()
+if [ -d "$PKG_DIR_REPO/packages/$PKG_NAME/files" ]; then
+    files_mount=(--mount "type=bind,source=$PKG_DIR_REPO/packages/$PKG_NAME/files,destination=/files,relabel=shared,ro=true")
+fi
+
 echo "✅ Install the $distro packages into a fresh $image container"
 podman run \
     --arch "$PKG_OCI_ARCH" \
     --detach \
+    "${files_mount[@]}" \
     --mount "type=bind,source=$PKG_DIR_PACKAGED/$distro,destination=/packaged,relabel=private,ro=true" \
     --name "$container" \
     --replace \
@@ -47,6 +55,16 @@ podman run \
 trap 'podman stop --time 0 "$container" >/dev/null' EXIT
 
 case "$distro" in
+debian-v11)
+    # the same snapshot sources as in build/containerfiles/debian-v11
+    podman exec --env=DEBIAN_FRONTEND=noninteractive "$container" /bin/bash -c \
+        'sed --in-place \
+             --expression="s|^deb http|# deb http|" \
+             --expression="s|^# deb http://snapshot|deb http://snapshot|" \
+             /etc/apt/sources.list &&
+         echo "Acquire::Check-Valid-Until \"false\";" > /etc/apt/apt.conf.d/99snapshot &&
+         apt-get update && apt-get install --no-install-recommends --yes /packaged/*.deb'
+    ;;
 debian-* | ubuntu-*)
     podman exec --env=DEBIAN_FRONTEND=noninteractive "$container" /bin/bash -c \
         'apt-get update && apt-get install --no-install-recommends --yes /packaged/*.deb'

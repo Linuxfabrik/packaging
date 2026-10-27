@@ -60,7 +60,7 @@ sudo rpm --import https://repo.linuxfabrik.ch/linuxfabrik.key
 sudo zypper install https://repo.linuxfabrik.ch/linuxfabrik-release-latest-sle16.noarch.rpm
 ```
 
-Debian 12 and 13, Ubuntu 22.04, 24.04 and 26.04 (replace `debian13` with `debian12`, `ubuntu22.04`, `ubuntu24.04` or `ubuntu26.04`):
+Debian 11, 12 and 13, Ubuntu 22.04, 24.04 and 26.04 (replace `debian13` with `debian11`, `debian12`, `ubuntu22.04`, `ubuntu24.04` or `ubuntu26.04`):
 
 ```bash
 curl --fail --location --remote-name https://repo.linuxfabrik.ch/linuxfabrik-release-latest-debian13.deb

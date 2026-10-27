@@ -80,6 +80,7 @@ PUBLISH_WEBROOT="${PUBLISH_WEBROOT:-/var/www/html/repo.linuxfabrik.ch}"
 # Codename -> "<name> <version>" for the start page.
 deb_release_name() {
     case "$1" in
+    bullseye) echo 'Debian 11' ;;
     bookworm) echo 'Debian 12' ;;
     trixie) echo 'Debian 13' ;;
     forky) echo 'Debian 14' ;;
@@ -99,6 +100,7 @@ repo_target() {
     # sle, not sles: the same repository serves SLES, SLED and openSUSE Leap
     # (verified with Leap 15.5 and 16.0), as repo.linuxfabrik.ch/monitoring-plugins/sle/ does
     sles-v*) echo "sle/${1#sles-v}" ;;
+    debian-v11) echo 'debian bullseye' ;;
     debian-v12) echo 'debian bookworm' ;;
     debian-v13) echo 'debian trixie' ;;
     debian-v14) echo 'debian forky' ;;
