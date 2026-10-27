@@ -431,7 +431,8 @@ issue labelled `vulnerability` per affected build and closes it once the build i
 or replaced. It rebuilds nothing on its own: a Go standard library fix needs
 `gh workflow run lf-release.yml --field package=<name>`, a bundled dependency an upstream
 release that ships the fix, and the Monitoring Plugins a patch release of
-monitoring-plugins, at most one a week, as each build needs a manual SignPath approval.
+monitoring-plugins, at most one a week, as each release builds the Windows packages as
+well, which need a manual SignPath approval.
 
 ### Repository layout
 
