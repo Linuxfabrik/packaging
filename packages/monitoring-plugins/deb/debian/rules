@@ -4,6 +4,11 @@
 	# Use debhelper for this makefile
 	dh $@
 
+override_dh_strip:
+	# No -dbgsym package: the only binaries are the shared objects of the wheels in
+	# the venv, built upstream.
+	dh_strip --no-automatic-dbgsym
+
 override_dh_auto_install:
 	# create-deb.sh copies the package's files/ into debian/
 	bash debian/install-venv.sh python3 debian/tmp/usr/lib64/linuxfabrik-monitoring-plugins/venv

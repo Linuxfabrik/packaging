@@ -27,6 +27,10 @@ Packager:       info@linuxfabrik.ch
 # `code` and `code-insiders`.
 %define _build_id_links none
 
+# No -debuginfo and -debugsource packages (SLE 16 builds them by default): the only
+# binaries are the shared objects of the wheels in the venv, built upstream.
+%global debug_package %{nil}
+
 Source0:        https://github.com/Linuxfabrik/monitoring-plugins/archive/v%{version}/monitoring-plugins-%{version}.tar.gz
 Source1:        install-plugins.sh
 Source2:        install-venv.sh
