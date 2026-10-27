@@ -26,6 +26,16 @@
 #   DEB: <debian|ubuntu>/linuxfabrik/ with dists/<codename>-<channel>/main
 #        (freight, Release files signed)
 #
+# Until PUBLISH_LEGACY_MP_UNTIL, the Linuxfabrik Monitoring Plugins also go to
+# the former tree that hosts set up before linuxfabrik-release still use:
+#
+#   RPM: monitoring-plugins/<rhel|sle>/<os-version>/<channel>/<arch>/
+#        (one repodata per <channel>/ directory)
+#   DEB: monitoring-plugins/<debian|ubuntu>/ with dists/<codename>-<channel>/main
+#        (freight library monitoring-plugins-<os>/, Origin and Label
+#        "Linuxfabrik Monitoring Plugins" as before: apt refuses a repository
+#        whose Origin or Label changes)
+#
 # Required environment:
 #   GH_TOKEN                     read-only GitHub token, for the API and for
 #                                `gh attestation verify`
@@ -41,6 +51,8 @@
 #   PUBLISH_FREIGHT_LIB      [/var/lib/freight] the freight libraries go to
 #                            linuxfabrik-debian/ and linuxfabrik-ubuntu/ below it
 #   PUBLISH_GITHUB_REPO      [Linuxfabrik/packaging]
+#   PUBLISH_LEGACY_MP_UNTIL  [2026-12-31] last day (YYYY-MM-DD) on which the
+#                            Monitoring Plugins also go to the former tree
 #   PUBLISH_RPM_ARCHES       [aarch64 x86_64] arch directories that receive
 #                            noarch packages
 #   PUBLISH_SIGNER_WORKFLOW  [<PUBLISH_GITHUB_REPO>/.github/workflows/lf-release.yml]
@@ -59,6 +71,7 @@ PUBLISH_BASE_URL="${PUBLISH_BASE_URL:-https://repo.linuxfabrik.ch}"
 PUBLISH_BOOTSTRAP_PACKAGES="${PUBLISH_BOOTSTRAP_PACKAGES:-linuxfabrik-release}"
 PUBLISH_FREIGHT_LIB="${PUBLISH_FREIGHT_LIB:-/var/lib/freight}"
 PUBLISH_GITHUB_REPO="${PUBLISH_GITHUB_REPO:-Linuxfabrik/packaging}"
+PUBLISH_LEGACY_MP_UNTIL="${PUBLISH_LEGACY_MP_UNTIL:-2026-12-31}"
 PUBLISH_RPM_ARCHES="${PUBLISH_RPM_ARCHES:-aarch64 x86_64}"
 PUBLISH_SIGNER_WORKFLOW="${PUBLISH_SIGNER_WORKFLOW:-$PUBLISH_GITHUB_REPO/.github/workflows/lf-release.yml}"
 PUBLISH_STATE_DIR="${PUBLISH_STATE_DIR:-/var/lib/linuxfabrik-publish}"
@@ -110,6 +123,47 @@ ARCHS='amd64 arm64'
 VARCACHE='$PUBLISH_WEBROOT/$os/linuxfabrik'
 ORIGIN='Linuxfabrik'
 LABEL='Linuxfabrik'
+CACHE='off'
+GPG='$PUBLISH_GPG_KEY'
+GPG_PASSPHRASE_FILE='$PUBLISH_GPG_PASSPHRASE_FILE'
+GPG_DIGEST_ALGO='SHA512'
+SYMLINKS='off'
+EOF
+    echo "$conf"
+}
+
+# Whether a package goes to the former Monitoring Plugins tree as well: one of
+# linuxfabrik-monitoring-plugins*, and PUBLISH_LEGACY_MP_UNTIL not yet past.
+# ISO dates compare as strings.
+legacy_mp() {
+    case "$(basename "$1")" in
+    linuxfabrik-monitoring-plugins[-_]*) ;;
+    *) return 1 ;;
+    esac
+    [[ ! "$(date +%F)" > "$PUBLISH_LEGACY_MP_UNTIL" ]]
+}
+
+# Distro -> path of the former Monitoring Plugins tree: "rhel/<version>" and
+# "sle/<version>" for RPM, "<os> <codename>" for DEB as in repo_target.
+legacy_mp_target() {
+    case "$1" in
+    almalinux-v* | centos-v* | rhel-v* | rocky-v*) echo "rhel/${1#*-v}" ;;
+    *) repo_target "$1" ;;
+    esac
+}
+
+# Write the freight configuration for the former Monitoring Plugins tree of one
+# DEB repository (debian or ubuntu), with the settings of the configuration it
+# was published with (/etc/freight-monitoring-plugins-<os>.conf on 001-p-repo51).
+legacy_mp_freight_conf() {
+    local os="$1"
+    local conf="$PUBLISH_STATE_DIR/freight-monitoring-plugins-$os.conf"
+    cat > "$conf" <<EOF
+VARLIB='$PUBLISH_FREIGHT_LIB/monitoring-plugins-$os'
+ARCHS='amd64 arm64'
+VARCACHE='$PUBLISH_WEBROOT/monitoring-plugins/$os'
+ORIGIN='Linuxfabrik Monitoring Plugins'
+LABEL='Linuxfabrik Monitoring Plugins'
 CACHE='off'
 GPG='$PUBLISH_GPG_KEY'
 GPG_PASSPHRASE_FILE='$PUBLISH_GPG_PASSPHRASE_FILE'
@@ -185,8 +239,9 @@ fetch_release() {
 # Add the verified packages of a release to a channel.
 publish_release() {
     local tag="$1" channel="$2" dir="$3"
-    local distro file target os codename arch repo_dir
+    local distro file target legacy os codename arch repo_dir
     local -A deb_dirty=()
+    local -A legacy_deb_dirty=()
     local -A rpm_dirty=()
 
     # Not `done < <(fetch_release ...)`: bash ignores the exit code of a process
@@ -206,11 +261,26 @@ publish_release() {
                 cp "$file" "$repo_dir/"
                 rpm_dirty[$repo_dir]=1
             done
+            if legacy_mp "$file"; then
+                legacy="$(legacy_mp_target "$distro")"
+                repo_dir="$PUBLISH_WEBROOT/monitoring-plugins/$legacy/$channel"
+                for arch in $(rpm_arches "$file"); do
+                    mkdir --parents "$repo_dir/$arch"
+                    cp "$file" "$repo_dir/$arch/"
+                done
+                rpm_dirty[$repo_dir]=1
+                echo "$tag: $(basename "$file") -> monitoring-plugins/$legacy $channel"
+            fi
             ;;
         *.deb)
             read -r os codename <<< "$target"
             freight-add --conf="$(freight_conf "$os")" "$file" "apt/$codename-$channel"
             deb_dirty[$os]=1
+            if legacy_mp "$file"; then
+                freight-add --conf="$(legacy_mp_freight_conf "$os")" "$file" "apt/$codename-$channel"
+                legacy_deb_dirty[$os]=1
+                echo "$tag: $(basename "$file") -> monitoring-plugins/$os $codename $channel"
+            fi
             ;;
         esac
         echo "$tag: $(basename "$file") -> $target $channel"
@@ -221,6 +291,9 @@ publish_release() {
     done
     for os in "${!deb_dirty[@]}"; do
         freight-cache --conf="$(freight_conf "$os")"
+    done
+    for os in "${!legacy_deb_dirty[@]}"; do
+        freight-cache --conf="$(legacy_mp_freight_conf "$os")"
     done
 
     if [ "$channel" = 'release' ]; then
@@ -286,8 +359,9 @@ bootstrap_link() {
 # Remove the packages of a rejected release from the testing channel.
 reject_release() {
     local tag="$1" dir="$2"
-    local distro file target os codename arch repo_dir
+    local distro file target legacy os codename arch repo_dir
     local -A deb_dirty=()
+    local -A legacy_deb_dirty=()
     local -A rpm_dirty=()
 
     fetch_release "$tag" "$dir" > "$dir.files"
@@ -300,12 +374,24 @@ reject_release() {
                 rm --force "$repo_dir/$(basename "$file")"
                 rpm_dirty[$repo_dir]=1
             done
+            if legacy_mp "$file"; then
+                legacy="$(legacy_mp_target "$distro")"
+                repo_dir="$PUBLISH_WEBROOT/monitoring-plugins/$legacy/testing"
+                for arch in $(rpm_arches "$file"); do
+                    rm --force "$repo_dir/$arch/$(basename "$file")"
+                done
+                rpm_dirty[$repo_dir]=1
+            fi
             ;;
         *.deb)
             read -r os codename <<< "$target"
             # freight-cache rebuilds the suite from what is left in its library
             rm --force "$PUBLISH_FREIGHT_LIB/linuxfabrik-$os/apt/$codename-testing/$(basename "$file")"
             deb_dirty[$os]=1
+            if legacy_mp "$file"; then
+                rm --force "$PUBLISH_FREIGHT_LIB/monitoring-plugins-$os/apt/$codename-testing/$(basename "$file")"
+                legacy_deb_dirty[$os]=1
+            fi
             ;;
         esac
         echo "$tag: $(basename "$file") removed from $target testing"
@@ -316,6 +402,9 @@ reject_release() {
     done
     for os in "${!deb_dirty[@]}"; do
         freight-cache --conf="$(freight_conf "$os")"
+    done
+    for os in "${!legacy_deb_dirty[@]}"; do
+        freight-cache --conf="$(legacy_mp_freight_conf "$os")"
     done
 }
 

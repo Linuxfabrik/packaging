@@ -430,6 +430,10 @@ in short, the server needs:
   the webroot, and where that fails, it copies and later deletes the pool files of earlier
   releases. systemd's `ReadWritePaths=` makes every listed path its own bind mount, so list a
   common parent such as `/var`. `publish.sh` checks this at start and refuses to run otherwise.
+- until `PUBLISH_LEGACY_MP_UNTIL` (2026-12-31), write access for that user to the former
+  Monitoring Plugins tree (`PUBLISH_WEBROOT/monitoring-plugins/` and the freight libraries
+  `PUBLISH_FREIGHT_LIB/monitoring-plugins-{debian,ubuntu}`), which the script publishes the
+  `linuxfabrik-monitoring-plugins*` packages to as well
 - a systemd timer that runs the script; it locks itself against overlapping runs
 
 ### linuxfabrik-release
