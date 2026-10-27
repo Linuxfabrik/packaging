@@ -1,0 +1,128 @@
+name: 'Linuxfabrik: 60 - Scan for vulnerabilities'
+
+# Scans the published packages for known vulnerabilities in what they bundle
+# (build/scan-vulnerabilities.sh) and keeps one issue per release with findings,
+# labelled `vulnerability`. An issue is closed once its release has no fixable
+# findings anymore or a newer build replaced it.
+#
+# Nothing is rebuilt automatically: a Monitoring Plugins build is expensive and
+# needs a manual SignPath approval, so a fix there goes out as a patch release
+# of monitoring-plugins, at most once a week.
+
+on:
+  schedule:
+    # Daily at 06:00 UTC, after the promotion to `release` (lf-promote.yml).
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: 'read'
+
+concurrency:
+  group: 'lf-scan'
+  cancel-in-progress: false
+
+env:
+  # Pinned with its checksum. Take a release that is at least two weeks old.
+  GRYPE_SHA256: '0a9ee97ef5ae2ee953b0a80098105052e846cdbe319a57d808b519c33cd1343d'
+  GRYPE_VERSION: '0.120.1'
+
+jobs:
+  scan:
+    runs-on:
+      - 'ubuntu-24.04'
+    timeout-minutes: 60
+    permissions:
+      contents: 'read'
+      issues: 'write'
+    steps:
+      - name: 'Harden the runner (Audit all outbound calls)'
+        uses: 'step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2' # v2.22.2
+        with:
+          egress-policy: 'audit'
+
+      - name: 'git clone https://github.com/Linuxfabrik/packaging'
+        uses: 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1' # v7.0.1
+
+      - name: 'Install grype and rpm2cpio'
+        run: |
+          tarball="grype_${GRYPE_VERSION}_linux_amd64.tar.gz"
+          curl --fail --silent --show-error --location --output "$RUNNER_TEMP/$tarball" \
+              "https://github.com/anchore/grype/releases/download/v${GRYPE_VERSION}/$tarball"
+          echo "$GRYPE_SHA256  $RUNNER_TEMP/$tarball" | sha256sum --check
+          mkdir "$RUNNER_TEMP/bin"
+          tar --extract --gzip --file "$RUNNER_TEMP/$tarball" --directory "$RUNNER_TEMP/bin" grype
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends cpio rpm2cpio
+
+      - name: 'Scan the published packages'
+        env:
+          GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+        run: |
+          bash build/scan-vulnerabilities.sh "$RUNNER_TEMP/scan"
+
+      # Runs only after a complete scan, so that a failed one never closes an
+      # issue.
+      - name: 'Open, update and close the issues'
+        env:
+          GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+          LABEL: 'vulnerability'
+          SCAN: '${{ runner.temp }}/scan'
+        run: |
+          prefix='Vulnerable dependencies in '
+          gh label create "$LABEL" \
+              --color 'b60205' \
+              --description 'Found by the daily vulnerability scan' \
+              --force \
+              --repo "$GITHUB_REPOSITORY"
+
+          open_issues="$(gh issue list \
+              --json 'number,title' \
+              --label "$LABEL" \
+              --limit 1000 \
+              --repo "$GITHUB_REPOSITORY" \
+              --state 'open')"
+
+          for report in "$SCAN"/*.md; do
+            [ -e "$report" ] || continue
+            tag="$(basename "$report" .md)"
+            title="$prefix$tag"
+            body="$RUNNER_TEMP/body.md"
+            {
+              echo "The daily scan found these vulnerabilities with a fixed version in the x86_64 and noarch packages of the release [$tag](https://github.com/$GITHUB_REPOSITORY/releases/tag/$tag). Last scanned: $(date --utc '+%Y-%m-%d')."
+              echo
+              cat "$report"
+              echo
+              echo 'How to fix:'
+              echo
+              echo '* Go standard library: rebuild with the newest Go patch release, `gh workflow run lf-release.yml --field package=<package>`.'
+              echo '* Bundled dependency: needs an upstream release that ships the fixed version, then the version bump here.'
+              echo '* Monitoring Plugins: a patch release of monitoring-plugins with the fixed lockfiles, at most one a week.'
+            } > "$body"
+
+            number="$(jq --raw-output --arg title "$title" \
+                '.[] | select(.title == $title) | .number' <<< "$open_issues")"
+            if [ -n "$number" ]; then
+              echo "Update #$number: $title"
+              gh issue edit "$number" --body-file "$body" --repo "$GITHUB_REPOSITORY"
+            else
+              echo "Open: $title"
+              gh issue create --body-file "$body" --label "$LABEL" --repo "$GITHUB_REPOSITORY" --title "$title"
+            fi
+          done
+
+          jq --raw-output '.[] | "\(.number) \(.title)"' <<< "$open_issues" |
+            while read -r number title; do
+              tag="${title#"$prefix"}"
+              if [ "$tag" = "$title" ] || [ -e "$SCAN/$tag.md" ]; then
+                continue
+              fi
+              if grep --quiet --line-regexp --fixed-strings "$tag" "$SCAN/scanned"; then
+                comment="The daily scan finds no fixable vulnerabilities in $tag anymore."
+              else
+                comment="$tag is no longer the newest build in \`testing\` or \`release\`; a newer one is scanned instead."
+              fi
+              echo "Close #$number: $title"
+              gh issue close "$number" --comment "$comment" --repo "$GITHUB_REPOSITORY"
+            done
