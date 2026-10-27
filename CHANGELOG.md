@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * New upstream releases are packaged and published automatically, first to the `testing` channel and after seven days to `release`.
 * One signed repository per distribution for all Linuxfabrik packages on repo.linuxfabrik.ch, with signed metadata for `repo_gpgcheck=1`.
 * Packages are built and smoke-tested for aarch64 (arm64) as well, natively on arm64 build machines.
+* The published packages are scanned daily for known vulnerabilities in the dependencies they bundle, such as Go modules and the Python venv of the Monitoring Plugins.
 * Packages are built for a distribution release until six months after its vendor stops shipping free updates, giving one more maintenance window.
 
 ### Changed

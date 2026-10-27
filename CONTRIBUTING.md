@@ -423,6 +423,16 @@ The signing key never leaves the repository server: CI only ever handles unsigne
 packages, and the server pulls instead of GitHub pushing to it. The GitHub releases
 double as the archive of every package ever built.
 
+`lf-scan.yml` scans the published packages daily with grype
+(`build/scan-vulnerabilities.sh`): per package the newest build in `release` and, if
+newer, in `testing`, for vulnerabilities with a fixed version in what the package
+bundles, such as Go modules, the Go standard library or the Python venv. It keeps one
+issue labelled `vulnerability` per affected build and closes it once the build is clean
+or replaced. It rebuilds nothing on its own: a Go standard library fix needs
+`gh workflow run lf-release.yml --field package=<name>`, a bundled dependency an upstream
+release that ships the fix, and the Monitoring Plugins a patch release of
+monitoring-plugins, at most one a week, as each build needs a manual SignPath approval.
+
 ### Repository layout
 
 One aggregated Linuxfabrik repository per distribution, the same layout the Pulp
