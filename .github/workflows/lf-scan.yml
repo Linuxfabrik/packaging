@@ -5,9 +5,11 @@ name: 'Linuxfabrik: 60 - Scan for vulnerabilities'
 # labelled `vulnerability`. An issue is closed once its release has no fixable
 # findings anymore or a newer build replaced it.
 #
-# Nothing is rebuilt automatically: a Monitoring Plugins build is expensive and
-# needs a manual SignPath approval, so a fix there goes out as a patch release
-# of monitoring-plugins, at most once a week.
+# Nothing is rebuilt automatically. A fix in the lockfiles of the Monitoring
+# Plugins goes out as a patch release of monitoring-plugins, at most once a
+# week: each release builds the Windows packages as well, which are expensive
+# and need a manual SignPath approval. Rebuilding the Linux packages here needs
+# no approval.
 
 on:
   schedule:
