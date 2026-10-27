@@ -513,6 +513,7 @@ table { border-collapse: collapse; margin: .6em 0; }
 td, th { border: 1px solid #ddd; padding: .3em .7em; text-align: left; }
 th { background: #f4f4f4; }
 .fingerprint { white-space: nowrap; }
+.notice { background: #fff4e5; border-left: 4px solid #ff6600; border-radius: 4px; margin: 1.5em 0; padding: .2em 1em; }
 .note { color: #555; font-size: .9em; }
 .overview { font-size: .9em; }
 .overview td, .overview th { padding: .3em .5em; white-space: nowrap; }
@@ -593,7 +594,31 @@ render_index() {
 <p>Signed RPM and DEB packages of Linuxfabrik's own software and of third-party software
 that the distributions do not ship, built from the upstream sources in
 <a href="https://github.com/$PUBLISH_GITHUB_REPO">$PUBLISH_GITHUB_REPO</a>.
-One repository per distribution, for x86_64 and aarch64.</p>
+One repository per distribution, for x86_64 and aarch64, to browse directly:
+<a href="/el/">el/</a>, <a href="/fedora/">fedora/</a>, <a href="/sle/">sle/</a>,
+<a href="/debian/">debian/</a>, <a href="/ubuntu/">ubuntu/</a>.</p>
+
+<!-- Remove after the old Monitoring Plugins repository is switched off on 2026-12-31. -->
+<div class="notice">
+<p><strong>repo.linuxfabrik.ch is being restructured.</strong> The Linuxfabrik Monitoring
+Plugins move from their separate repository below <code>/monitoring-plugins/</code> into the
+Linuxfabrik repository, which serves all packages from one signed repository per
+distribution. The repository URLs of the Monitoring Plugins change; the package names stay
+the same. Until 2026-12-31, each Monitoring Plugins release is published in both
+repositories.</p>
+<p>Please switch your hosts to <code>linuxfabrik-release</code> as described below. It works
+like <code>epel-release</code> on RHEL: one package that sets up the repository and its
+signing key. Then remove the configuration of the old repository:</p>
+<pre>
+sudo rm --force /etc/yum.repos.d/linuxfabrik-monitoring-plugins*.repo          # RHEL 8, 9 and 10
+sudo rm --force /etc/zypp/repos.d/linuxfabrik-monitoring-plugins*.repo         # SLES, openSUSE Leap
+sudo rm --force /etc/apt/sources.list.d/linuxfabrik-monitoring-plugins.list    # Debian, Ubuntu
+</pre>
+<p>The installed packages stay, their updates come from the Linuxfabrik repository from then
+on. Hosts managed with <a href="https://github.com/Linuxfabrik/lfops">LFOps</a> need no manual
+step: the next LFOps release switches them to <code>linuxfabrik-release</code>. The old repository
+below <code>/monitoring-plugins/</code> will be switched off on 2026-12-31.</p>
+</div>
 
 <h2>Set up the repository</h2>
 <p><code>linuxfabrik-release</code> configures the repository and installs the signing key.
@@ -666,17 +691,14 @@ publishes the package. Details:
 all builds: <a href="https://github.com/$PUBLISH_GITHUB_REPO/releases">GitHub releases</a>.</p>
 
 <h2>Other repositories on this server</h2>
-<p>These repositories are not covered by <code>linuxfabrik-release</code> and have their
-own setup.</p>
+<p>This repository is not covered by <code>linuxfabrik-release</code> and has its own
+setup.</p>
 <ul>
 <li><a href="/monitoring-plugins/">monitoring-plugins/</a>: the
 <a href="https://github.com/Linuxfabrik/monitoring-plugins">Linuxfabrik Monitoring Plugins</a>,
-installed with <a href="/install-monitoring-plugins">install-monitoring-plugins</a></li>
-<li><a href="/mydumper/">mydumper/</a>: RPMs from the GitHub releases of
-<a href="https://github.com/mydumper/mydumper">MyDumper</a></li>
+installed with <a href="/install-monitoring-plugins">install-monitoring-plugins</a>;
+switched off on 2026-12-31, see above</li>
 </ul>
-<p>Browse the repositories directly: <a href="/el/">el/</a>, <a href="/fedora/">fedora/</a>,
-<a href="/sle/">sle/</a>, <a href="/debian/">debian/</a>, <a href="/ubuntu/">ubuntu/</a>.</p>
 
 <footer>
 <a href="$PUBLISH_BASE_URL/linuxfabrik.key">linuxfabrik.key</a> &middot; fingerprint

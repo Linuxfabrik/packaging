@@ -31,6 +31,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `linuxfabrik-release`: unattended dnf runs such as `dnf-makecache.service` work right after the installation. The check of the repository metadata signature (`repo_gpgcheck`) is off, packages are still signature-checked.
 * Linuxfabrik Monitoring Plugins: the venv of the plugins comes without pip, which the plugins do not use.
 
+### Deprecated
+
+* The separate Monitoring Plugins repository below repo.linuxfabrik.ch/monitoring-plugins/ is switched off on 2026-12-31; set up hosts with `linuxfabrik-release`, which serves the Monitoring Plugins as well.
+
 ### Fixed
 
 * RPM packages carry a changelog entry for their own version instead of a fixed one.
