@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * exoscale-cli (`exo`) packages for RHEL 8 to 10, Fedora, SLES and openSUSE Leap 15 and 16, Debian 12 and 13 and Ubuntu 22.04 to 26.04, built from source; they replace the upstream RPM mirrored under repo.linuxfabrik.ch/exoscale/cli and update hosts that installed it.
 * FirewallFabrik packages for RHEL 10, Fedora 44, Debian 13 and Ubuntu 26.04, split into the compilers (`linuxfabrik-firewallfabrik`) and the GUI (`linuxfabrik-firewallfabrik-gui`), with man pages; they replace the `firewallfabrik` packages from mirror.plustech.de.
 * glances packages for EL, Fedora, Debian and Ubuntu.
+* Grafana gcx packages (`grafana-gcx`) for RHEL 8 to 10, Fedora, SLES and openSUSE Leap 15 and 16, Debian 12 and 13 and Ubuntu 22.04 to 26.04, built from source, with shell completions; usage telemetry and the check for new releases on GitHub are off.
 * `linuxfabrik-release` sets up the Linuxfabrik repository with one install command, for RHEL 8 to 10, Fedora, SLES and openSUSE Leap 15 and 16, Debian 12 and 13 and Ubuntu 22.04 to 26.04.
 * New upstream releases are packaged and published automatically, first to the `testing` channel and after seven days to `release`.
 * One signed repository per distribution for all Linuxfabrik packages on repo.linuxfabrik.ch, with signed metadata for `repo_gpgcheck=1`.

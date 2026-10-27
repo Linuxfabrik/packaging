@@ -1,0 +1,22 @@
+#!/usr/bin/make -f
+
+include /usr/share/dpkg/pkg-info.mk
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	# create-deb.sh puts the orig tarball next to the source tree
+	bash debian/build-gcx.sh $(DEB_VERSION_UPSTREAM) ../grafana-gcx_$(DEB_VERSION_UPSTREAM).orig.tar.gz
+
+override_dh_auto_test:
+	# upstream's Go tests need its mise toolchain and test fixtures; the smoke
+	# test covers the installed binary.
+
+override_dh_auto_install:
+	install -D -m 0755 gcx debian/grafana-gcx/usr/bin/gcx
+	install -D -m 0644 completion.bash debian/grafana-gcx/usr/share/bash-completion/completions/gcx
+	install -D -m 0644 completion.fish debian/grafana-gcx/usr/share/fish/vendor_completions.d/gcx.fish
+	install -D -m 0644 completion.zsh debian/grafana-gcx/usr/share/zsh/vendor-completions/_gcx
+	install -d debian/grafana-gcx/usr/share/doc/grafana-gcx
+	cp --recursive module-licenses debian/grafana-gcx/usr/share/doc/grafana-gcx/

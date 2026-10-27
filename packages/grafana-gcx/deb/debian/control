@@ -1,0 +1,27 @@
+Source: grafana-gcx
+Maintainer: Linuxfabrik GmbH <info@linuxfabrik.ch>
+Section: admin
+Priority: optional
+Standards-Version: 4.6.2
+Homepage: https://github.com/grafana/gcx
+Rules-Requires-Root: no
+Build-Depends: ca-certificates,
+               curl,
+               debhelper-compat (= 13)
+
+Package: grafana-gcx
+Architecture: any
+Depends: ${misc:Depends},
+         ${shlibs:Depends}
+# the astronomy tool gcx in Debian 12 and Ubuntu 22.04 installs /usr/bin/gcx too
+Conflicts: gcx
+Description: command-line tool for Grafana and Grafana Cloud
+ gcx manages Grafana and Grafana Cloud resources from the command line:
+ dashboards, datasources, alerting, and the Cloud product APIs such as SLO,
+ IRM, Synthetic Monitoring, Fleet and k6. It is designed to be driven by AI
+ agents as well as by people.
+ .
+ This package turns off the anonymous usage telemetry by default (opt in with
+ GCX_TELEMETRY=enabled or `diagnostics.telemetry: enabled` in the gcx config)
+ and the check for new gcx releases on GitHub; updates come through the package
+ manager.
