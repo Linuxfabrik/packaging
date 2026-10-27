@@ -26,7 +26,9 @@ fi
 
 # Download first, then install from the download only, so that pip never
 # reaches for an index while it installs. setuptools and wheel are needed to
-# build an sdist and are removed again afterwards.
+# build an sdist and are removed again afterwards, and so is pip itself: the
+# plugins never call it, and a pip in the venv would only add its own
+# vulnerabilities to every monitored host.
 wheels="$(mktemp --directory)"
 "$venv/bin/pip" download --dest "$wheels" setuptools wheel
 # --no-dependencies: every dependency is pinned with its hash in the lockfile
@@ -46,5 +48,6 @@ wheels="$(mktemp --directory)"
     --require-hashes \
     --requirement "$requirements"
 "$venv/bin/pip" uninstall --yes setuptools wheel
+"$venv/bin/python" -m pip uninstall --yes pip
 
 rm --recursive --force "$wheels"

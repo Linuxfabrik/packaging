@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `linuxfabrik-release`: if repo.linuxfabrik.ch cannot be reached, dnf skips the Linuxfabrik repositories with a warning instead of failing.
 * `linuxfabrik-release`: unattended dnf runs such as `dnf-makecache.service` work right after the installation. The check of the repository metadata signature (`repo_gpgcheck`) is off, packages are still signature-checked.
+* Linuxfabrik Monitoring Plugins: the venv of the plugins comes without pip, which the plugins do not use.
 
 ### Fixed
 
