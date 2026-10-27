@@ -1,3 +1,9 @@
+# Deliberately the oldest SLE 15 service pack: a package that links against
+# the glibc of the build image (linuxfabrik-monitoring-plugins with its venv)
+# needs the glibc of SP5 to install on SP5 to SP7. Built on SP7, it requires
+# GLIBC_2.33/2.34 and no longer installs on SP5. Verified with
+# linuxfabrik-monitoring-plugins 8.0.0 on bci-base 15.5, 15.6 and 15.7,
+# 2026-09-23.
 FROM registry.suse.com/suse/sle15:15.5
 
 # Install Python 3

@@ -17,11 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * FirewallFabrik packages for RHEL 10, Fedora 44, Debian 13 and Ubuntu 26.04, split into the compilers (`linuxfabrik-firewallfabrik`) and the GUI (`linuxfabrik-firewallfabrik-gui`), with man pages; they replace the `firewallfabrik` packages from mirror.plustech.de.
 * glances packages for EL, Fedora, Debian and Ubuntu.
 * Grafana gcx packages (`grafana-gcx`) for RHEL 8 to 10, Fedora, SLES and openSUSE Leap 15 and 16, Debian 12 and 13 and Ubuntu 22.04 to 26.04, built from source, with shell completions; usage telemetry and the check for new releases on GitHub are off.
-* Linuxfabrik Monitoring Plugins packages built here are also published to repo.linuxfabrik.ch/monitoring-plugins/ until 2026-12-31, so hosts that still use the former repository get the updates; switch them to `linuxfabrik-release` before that date.
-* `linuxfabrik-release` sets up the Linuxfabrik repository with one install command, for RHEL 8 to 10, Fedora, SLES and openSUSE Leap 15 and 16, Debian 12 and 13 and Ubuntu 22.04 to 26.04.
+* Linuxfabrik Monitoring Plugins packages for RHEL 8 to 10, SLES and openSUSE Leap 15 and 16, Debian 11 to 13 and Ubuntu 22.04 to 26.04; they replace the packages from repo.linuxfabrik.ch/monitoring-plugins/. Until 2026-12-31 they are published there as well, so hosts that still use it get the updates; switch them to `linuxfabrik-release` before that date.
+* `linuxfabrik-release` sets up the Linuxfabrik repository with one install command, for RHEL 8 to 10, Fedora, SLES and openSUSE Leap 15 and 16, Debian 11 to 13 and Ubuntu 22.04 to 26.04.
 * New upstream releases are packaged and published automatically, first to the `testing` channel and after seven days to `release`.
 * One signed repository per distribution for all Linuxfabrik packages on repo.linuxfabrik.ch, with signed metadata for `repo_gpgcheck=1`.
 * Packages are built and smoke-tested for aarch64 (arm64) as well, natively on arm64 build machines.
+* Packages are built for a distribution release until six months after its vendor stops shipping free updates, giving one more maintenance window.
 
 ### Changed
 
