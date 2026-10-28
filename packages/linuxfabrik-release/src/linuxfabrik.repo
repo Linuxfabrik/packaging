@@ -9,6 +9,17 @@
 # repository given skip_if_unavailable. The packages stay signed (gpgcheck=1),
 # and repomd.xml is signed for those who enable the check. Verified with dnf
 # 4.14 on Rocky 9 against repo.linuxfabrik.ch.
+#
+# autorefresh=1: zypper refreshes the metadata before it searches, installs or
+# updates, at most every repo.refresh.delay (10 minutes by default). Without the
+# key zypper keeps the metadata until an explicit `zypper refresh`, and new
+# packages never show up on their own. Verified with zypper 1.14 and libzypp
+# 17.38 on SLES 15 SP7 and 16.0. dnf ignores the key (versions as below).
+#
+# metadata_expire=6h, as Fedora does for its updates repository: dnf otherwise
+# keeps the metadata for 48 hours, so new packages show up up to two days late.
+# Verified with dnf 4.7, 4.14 and 4.20 on Rocky 8, 9 and 10, and dnf5 5.4 on
+# Fedora 44. zypper ignores the key (SLES 15 SP7, SLES 16.0).
 [linuxfabrik]
 name=Linuxfabrik
 baseurl=https://repo.linuxfabrik.ch/@REPO_PATH@/$basearch/linuxfabrik/release/
@@ -17,6 +28,8 @@ gpgcheck=1
 repo_gpgcheck=0
 gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-linuxfabrik
 skip_if_unavailable=1
+autorefresh=1
+metadata_expire=6h
 
 # Packages wait here for 7 days before they move to the release channel.
 [linuxfabrik-testing]
@@ -27,3 +40,5 @@ gpgcheck=1
 repo_gpgcheck=0
 gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-linuxfabrik
 skip_if_unavailable=1
+autorefresh=1
+metadata_expire=6h
