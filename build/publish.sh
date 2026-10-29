@@ -13,6 +13,10 @@
 #   GitHub release                  -> channel `release`
 #   prerelease titled "(rejected)"  -> removed from `testing` again
 #
+# Releases tagged `sources-<package>` are skipped: they hold upstream sources
+# that the build cannot fetch from GitHub's runners itself (see the
+# package.conf of the package), not packages.
+#
 # Pull, not push: CI attaches the packages unsigned, and only this script, on
 # our own server, holds the signing key. Before anything is published, every
 # asset is checked against its build provenance attestation, so only files
@@ -758,12 +762,13 @@ main() {
 
     # Oldest first: a server set up from scratch replays the releases in the
     # order they happened, so the newest build ends up behind a bootstrap link.
+    # The source releases carry no attestation and would fail the run.
     gh release list \
         --exclude-drafts \
         --json 'isPrerelease,name,tagName' \
         --limit 1000 \
         --repo "$PUBLISH_GITHUB_REPO" \
-        --jq 'reverse | .[] | "\(.tagName) \(.isPrerelease) \(.name)"' \
+        --jq 'reverse | .[] | select(.tagName | startswith("sources-") | not) | "\(.tagName) \(.isPrerelease) \(.name)"' \
         | while read -r tag prerelease name; do
             if [ "$prerelease" = 'true' ] && [[ "$name" == *'(rejected)' ]]; then
                 channel='rejected'

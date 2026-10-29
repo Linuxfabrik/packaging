@@ -264,6 +264,19 @@ instead of `PKG_SOURCE_URL`: `create-package.sh` packs that directory into
 `PKG_SOURCE_TARBALL` with a top-level `<name>-<version>/` directory, the way an
 upstream tarball looks, so the recipes need no special case.
 
+Some upstreams refuse downloads from GitHub's runners. Their source goes as an asset into
+a release of this repository tagged `sources-<name>`, uploaded from a host the upstream
+serves, and `PKG_SOURCE_URL` points there. Such a release is a full release, never a
+prerelease, so `lf-promote.yml` leaves it alone, and `publish.sh` and
+`scan-vulnerabilities.sh` skip it. Create it with `--latest=false`, so the latest
+release stays a package:
+
+```bash
+gh release create sources-<name> --latest=false --title 'Sources of <name>' \
+    --notes 'Upstream sources the build cannot fetch from GitHub runners.'
+gh release upload sources-<name> <tarball>
+```
+
 The spec uses `%{pkg_version}` / `%{pkg_release}`, injected by `create-rpm.sh`,
 so the version lives only in the manifest. The build iteration is not part of the
 manifest: the release workflow counts it up per version (see below).
