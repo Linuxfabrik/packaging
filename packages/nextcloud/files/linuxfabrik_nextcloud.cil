@@ -1,0 +1,8 @@
+; SELinux file contexts for the paths of the nextcloud package that the web
+; server writes to. The base policy labels them httpd_sys_content_t (read-only),
+; custom_apps/ included. notify_push runs as a systemd service, not as httpd.
+(filecon "/var/www/html/nextcloud/\.htaccess" file (system_u object_r httpd_sys_rw_content_t ((s0) (s0))))
+(filecon "/var/www/html/nextcloud/config(/.*)?" any (system_u object_r httpd_sys_rw_content_t ((s0) (s0))))
+(filecon "/var/www/html/nextcloud/custom_apps(/.*)?" any (system_u object_r httpd_sys_rw_content_t ((s0) (s0))))
+(filecon "/var/www/html/nextcloud/custom_apps/notify_push/bin/[^/]+/notify_push" file (system_u object_r bin_t ((s0) (s0))))
+(filecon "/var/www/html/nextcloud/data(/.*)?" any (system_u object_r httpd_sys_rw_content_t ((s0) (s0))))

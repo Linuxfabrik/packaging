@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+#
+# Author:  Linuxfabrik GmbH, Zurich, Switzerland
+# Contact: info (at) linuxfabrik (dot) ch
+#          https://www.linuxfabrik.ch/
+# License: The Unlicense, see LICENSE file.
+#
+# Finish an installation or update of the nextcloud package. The package runs
+# this after every transaction (%posttrans); run it by hand if it failed there.
+#
+# Without an installed instance it enables the installer (CAN_INSTALL). With one,
+# it leaves the maintenance mode the package turned on before replacing the
+# files, migrates the database to the new release (occ upgrade) and adds the
+# indices, columns and primary keys the release recommends.
+
+set -e -o pipefail -u
+
+NC_DIR='/var/www/html/nextcloud'
+WEBSERVER_USER='apache'
+# written by the %pre scriptlet when it turned on the maintenance mode
+MAINTENANCE_MARKER='/run/nextcloud-package-maintenance'
+
+occ() {
+    runuser --user "$WEBSERVER_USER" -- php "$NC_DIR/occ" --no-interaction "$@"
+}
+
+installed=''
+if [ -f "$NC_DIR/config/config.php" ]; then
+    installed="$(php --run 'include $argv[1]; echo empty($CONFIG["installed"]) ? "" : "yes";' \
+        "$NC_DIR/config/config.php")"
+fi
+
+if [ -z "$installed" ]; then
+    # occ maintenance:install and the web installer refuse to run without it
+    if [ ! -f "$NC_DIR/config/CAN_INSTALL" ]; then
+        touch "$NC_DIR/config/CAN_INSTALL"
+        chown "$WEBSERVER_USER:$WEBSERVER_USER" "$NC_DIR/config/CAN_INSTALL"
+    fi
+    echo "Nextcloud is not installed yet. Install it with 'sudo -u $WEBSERVER_USER php $NC_DIR/occ maintenance:install'."
+    exit 0
+fi
+
+# PHP-FPM may still hold the bytecode of the replaced release in its opcache
+systemctl try-restart php-fpm.service || true
+
+# In maintenance mode occ refuses every command but maintenance:mode. While the
+# database is not migrated yet, Nextcloud only answers with its update page.
+if [ -f "$MAINTENANCE_MARKER" ]; then
+    occ maintenance:mode --off
+    rm --force "$MAINTENANCE_MARKER"
+fi
+
+if occ status --output=json | php --run 'exit(json_decode(stream_get_contents(STDIN), true)["needsDbUpgrade"] ? 0 : 1);'; then
+    echo 'Migrating the Nextcloud database to the new release (occ upgrade).'
+    occ upgrade
+fi
+
+# Nextcloud adds these lazily to avoid long table locks during the upgrade. They
+# are idempotent and a no-op when nothing is missing.
+occ db:add-missing-indices
+occ db:add-missing-columns
+occ db:add-missing-primary-keys

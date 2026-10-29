@@ -25,7 +25,7 @@ PKG_DIR_SOURCES="$(mktemp --directory)"
 
 # Load the product manifest. It defines at least PKG_VERSION, PKG_SOURCE_TARBALL,
 # either PKG_SOURCE_URL or PKG_SOURCE_DIR, and the per-format distro lists and
-# recipe paths.
+# recipe paths. PKG_SOURCE_SIGNATURE_URL is optional.
 # shellcheck source=/dev/null
 source "$PKG_DIR_PACKAGE/package.conf"
 export PKG_NAME PKG_VERSION PKG_SOURCE_TARBALL
@@ -45,6 +45,13 @@ else
     curl --fail --silent --show-error --location \
         "$PKG_SOURCE_URL" \
         --output "$PKG_DIR_SOURCES/$PKG_SOURCE_TARBALL"
+    # The detached signature of the tarball, where the upstream publishes one.
+    # The recipe verifies it against the upstream key from files/.
+    if [ -n "${PKG_SOURCE_SIGNATURE_URL:-}" ]; then
+        curl --fail --silent --show-error --location \
+            "$PKG_SOURCE_SIGNATURE_URL" \
+            --output "$PKG_DIR_SOURCES/$(basename "$PKG_SOURCE_SIGNATURE_URL")"
+    fi
 fi
 
 echo "✅ Build $PKG_NAME for $PKG_TARGET_DISTRO"
