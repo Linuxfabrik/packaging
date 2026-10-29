@@ -256,6 +256,11 @@ PKG_SMOKE_TEST='glances --version'  # run as nobody after installing into a fres
 - `PKG_UPSTREAM_TAG_PREFIX`: stripped from the tag to get the version, default `v`.
   duplicity, for example, tags `rel.3.2.2`.
 - `PKG_UPSTREAM_URL`: the GitLab instance, default `https://gitlab.com`.
+- `PKG_UPSTREAM_MAJOR_MIN_PATCH`: with `tags`, a version of a newer major release than
+  `PKG_VERSION` only counts from this patch level on, while bugfix releases of the
+  packaged major still come through. Nextcloud sets `1`, so a new major release
+  reaches hosts that update unattended only with its first bugfix release, as in
+  Nextcloud's own stable channel.
 
 `PKG_UPSTREAM_TYPE='none'` is for packages without an upstream, such as
 `linuxfabrik-release`; they are rebuilt by changing their package directory. Such a

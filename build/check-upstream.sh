@@ -24,12 +24,19 @@
 #   PKG_UPSTREAM_PROJECT     e.g. nicolargo/glances, or group/subgroup/project
 #   PKG_UPSTREAM_SOURCE      releases (default) | tags
 #   PKG_UPSTREAM_TAG_PREFIX  stripped from the tag to get the version, default v
+#   PKG_UPSTREAM_MAJOR_MIN_PATCH  tags only: a version of a newer major release
+#                            than PKG_VERSION counts from this patch level on,
+#                            e.g. 1 waits for x.y.1 (default: no limit)
 #   PKG_UPSTREAM_URL         GitLab instance, default https://gitlab.com
 #
 # `releases` takes the release the upstream marks as latest; drafts and
 # prereleases never count. `tags` takes the highest version among all tags that
 # start with the prefix, skipping alpha, beta, dev, pre and rc tags. Use it for
 # projects that tag without publishing releases.
+#
+# PKG_UPSTREAM_MAJOR_MIN_PATCH holds back a new major release until its first
+# bugfix release, the way Nextcloud's own stable channel does, while bugfix
+# releases of the packaged major still come through.
 #
 # Honors GITHUB_TOKEN and GITLAB_TOKEN to avoid API rate limits and to read
 # private GitLab projects (releases only; tags are read with `git ls-remote`).
@@ -104,6 +111,8 @@ latest_tag_version() {
     done <<< "$refs" \
         | { grep --extended-regexp '^[0-9]+(\.[0-9]+)*([-+._][0-9A-Za-z.]+)?$' || true; } \
         | { grep --extended-regexp --ignore-case --invert-match '(alpha|beta|dev|pre|rc)' || true; } \
+        | awk -F. -v major="${PKG_VERSION%%.*}" -v min_patch="${PKG_UPSTREAM_MAJOR_MIN_PATCH:-0}" \
+            '$1 + 0 <= major + 0 || $3 + 0 >= min_patch + 0' \
         | sort --version-sort \
         | tail -1
 }
@@ -116,6 +125,10 @@ none)
     ;;
 *) die "PKG_UPSTREAM_TYPE must be github, gitlab or none, not '${PKG_UPSTREAM_TYPE:-}'" ;;
 esac
+
+if [ -n "${PKG_UPSTREAM_MAJOR_MIN_PATCH:-}" ] && [ "$PKG_UPSTREAM_SOURCE" != 'tags' ]; then
+    die "PKG_UPSTREAM_MAJOR_MIN_PATCH needs PKG_UPSTREAM_SOURCE='tags', the latest release alone shows no bugfix releases of the packaged major"
+fi
 
 case "$PKG_UPSTREAM_SOURCE" in
 releases)
