@@ -1,0 +1,51 @@
+# Based on the unit of Swisscom's .deb, but with a static account instead of
+# `DynamicUser=yes`, so that the client can be run under an existing account
+# such as `hnet` by a drop-in. The sandboxing that `DynamicUser=yes` implies is
+# set explicitly. The client may only write to the directories below, so the
+# folders of the connectors have to be added by a drop-in as well:
+#
+#   [Service]
+#   ReadWritePaths=/data/xml
+#   # optional
+#   Group=hnet
+#   User=hnet
+
+[Unit]
+After=network-online.target
+Description=curaLINE Client
+Wants=network-online.target
+
+[Service]
+CacheDirectory=swisscom-schweiz-ag/cdr-client
+# writable for the client, which rewrites application-customer.yaml when it
+# renews its credential
+ConfigurationDirectory=swisscom-schweiz-ag/cdr-client
+# independent of the home of the account, so the client never writes into an
+# existing home such as /home/hnet
+Environment=HOME=/var/lib/swisscom-schweiz-ag/cdr-client
+# Started through /usr/bin/env because of SELinux on the Red Hat family: the
+# client below /usr/lib is lib_t, for which systemd has no domain transition,
+# while bin_t makes it transition to unconfined_service_t, which may execute
+# the client.
+ExecStart=/usr/bin/env /usr/lib/swisscom-schweiz-ag/cdr-client/bin/cdr-client-service
+Group=swisscom-schweiz-ag-cdr-client
+LogsDirectory=swisscom-schweiz-ag/cdr-client
+LogsDirectoryMode=0750
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=read-only
+ProtectSystem=strict
+# the client exits with 29 after renewing its credential, to be restarted
+Restart=always
+RestartSec=10s
+RestrictSUIDSGID=yes
+StateDirectory=swisscom-schweiz-ag/cdr-client
+# the JVM exits with 143 on SIGTERM
+SuccessExitStatus=143
+SyslogIdentifier=cdr-client
+Type=exec
+User=swisscom-schweiz-ag-cdr-client
+WorkingDirectory=/usr/lib/swisscom-schweiz-ag/cdr-client
+
+[Install]
+WantedBy=multi-user.target

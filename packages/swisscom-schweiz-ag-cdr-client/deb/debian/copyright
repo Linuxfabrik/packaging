@@ -1,0 +1,31 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: cdr-client
+Upstream-Contact: Swisscom (Schweiz) AG
+Source: https://cdr.health.swisscom.ch/share/downloads/download.html
+
+Files: *
+Copyright: Swisscom (Schweiz) AG
+License: Apache-2.0
+ On Debian systems, the complete text of the Apache License version 2.0 can be
+ found in "/usr/share/common-licenses/Apache-2.0".
+
+Files: lib/runtime/*
+Copyright: Oracle and/or its affiliates, and the other authors of OpenJDK
+License: GPL-2.0 with Classpath exception
+ The bundled Java runtime is built from OpenJDK. The license texts of the
+ runtime and of the libraries it contains are in lib/runtime/legal/ below
+ /usr/lib/swisscom-schweiz-ag/cdr-client.
+ .
+ On Debian systems, the complete text of the GNU General Public License
+ version 2 can be found in "/usr/share/common-licenses/GPL-2".
+
+Files: debian/*
+Copyright: 2026 Linuxfabrik GmbH <info@linuxfabrik.ch>
+License: Unlicense
+ This is free and unencumbered software released into the public domain.
+ .
+ Anyone is free to copy, modify, publish, use, compile, sell, or distribute
+ this software, either in source code form or as a compiled binary, for any
+ purpose, commercial or non-commercial, and by any means.
+ .
+ For more information, please refer to <https://unlicense.org/>.

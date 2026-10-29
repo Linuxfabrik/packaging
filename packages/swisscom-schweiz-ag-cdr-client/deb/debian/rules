@@ -1,0 +1,47 @@
+#!/usr/bin/make -f
+
+APPDIR = /usr/lib/swisscom-schweiz-ag/cdr-client
+BASE = debian/swisscom-schweiz-ag-cdr-client
+GUI = debian/swisscom-schweiz-ag-cdr-client-gui
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	# The default configuration downloads into java.io.tmpdir, which is
+	# private to the service (PrivateTmp=yes) and emptied on every restart,
+	# so the documents being downloaded would be lost. Use the state
+	# directory instead.
+	sed --in-place 's|^\(  local-folder:\).*|\1 /var/lib/swisscom-schweiz-ag/cdr-client|' lib/app/conf/application-customer.yaml
+
+override_dh_auto_build:
+	# prebuilt
+
+override_dh_auto_install:
+	install -d $(BASE)$(APPDIR) $(BASE)/etc/swisscom-schweiz-ag/cdr-client $(BASE)/usr/bin
+	cp --archive bin lib $(BASE)$(APPDIR)/
+	# Conveyor's own unit; ours replaces it
+	rm --recursive $(BASE)$(APPDIR)/lib/systemd
+	ln --symbolic $(APPDIR)/bin/cdr-client-service $(BASE)/usr/bin/cdr-client-service
+	# dh_installsysusers is not part of the debhelper 13 sequence; the
+	# postinst runs systemd-sysusers itself
+	install -D -m 0644 debian/swisscom-schweiz-ag-cdr-client.sysusers $(BASE)/usr/lib/sysusers.d/swisscom-schweiz-ag-cdr-client.conf
+	# the UI
+	install -d $(GUI)$(APPDIR)/bin $(GUI)$(APPDIR)/lib/app/conf $(GUI)/usr/bin $(GUI)/usr/share
+	mv $(BASE)$(APPDIR)/bin/cdr-client-ui $(GUI)$(APPDIR)/bin/
+	mv $(BASE)$(APPDIR)/lib/app/conf/logback-ui.xml $(GUI)$(APPDIR)/lib/app/conf/
+	# the native libraries of the UI toolkit (Compose, tray icon, desktop theme)
+	install -d $(GUI)$(APPDIR)/lib/runtime/lib
+	mv $(addprefix $(BASE)$(APPDIR)/lib/runtime/lib/,libLinuxTray.so libnucleus_linux_theme.so libskiko-linux-x64.so) $(GUI)$(APPDIR)/lib/runtime/lib/
+	ln --symbolic $(APPDIR)/bin/cdr-client-ui $(GUI)/usr/bin/cdr-client-ui
+	cp --archive share/applications share/icons share/metainfo $(GUI)/usr/share/
+
+# Leave the binaries of the bundled Java runtime as Swisscom built them, and
+# keep its private libraries out of the shlibs and ldconfig handling.
+override_dh_dwz:
+
+override_dh_makeshlibs:
+
+override_dh_shlibdeps:
+
+override_dh_strip:

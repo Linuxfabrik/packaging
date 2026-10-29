@@ -1,0 +1,12 @@
+#!/bin/sh
+set -e
+
+# the configuration created by the postinst, with the client secret
+if [ "$1" = purge ]; then
+    rm --force /etc/swisscom-schweiz-ag/cdr-client/application-customer.yaml \
+        /etc/swisscom-schweiz-ag/cdr-client/logback-service.xml
+fi
+
+#DEBHELPER#
+
+exit 0

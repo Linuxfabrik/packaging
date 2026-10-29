@@ -20,16 +20,23 @@
 # With --write it also rewrites PKG_VERSION in package.conf to the latest version.
 #
 # Upstream coordinates in package.conf:
-#   PKG_UPSTREAM_TYPE        github | gitlab | none
+#   PKG_UPSTREAM_TYPE        github | gitlab | url | none
 #   PKG_UPSTREAM_PROJECT     e.g. nicolargo/glances, or group/subgroup/project
+#   PKG_UPSTREAM_REGEX       type url: Perl regex that matches the versions
 #   PKG_UPSTREAM_SOURCE      releases (default) | tags
 #   PKG_UPSTREAM_TAG_PREFIX  stripped from the tag to get the version, default v
-#   PKG_UPSTREAM_URL         GitLab instance, default https://gitlab.com
+#   PKG_UPSTREAM_URL         GitLab instance, default https://gitlab.com; for
+#                            type url the page to read the versions from
 #
 # `releases` takes the release the upstream marks as latest; drafts and
 # prereleases never count. `tags` takes the highest version among all tags that
 # start with the prefix, skipping alpha, beta, dev, pre and rc tags. Use it for
 # projects that tag without publishing releases.
+#
+# `url` is for upstreams that publish binaries on a download page that lags
+# behind their tags, such as the curaLINE Client. It takes the highest version
+# that PKG_UPSTREAM_REGEX matches on the page PKG_UPSTREAM_URL, read line by
+# line with `grep --perl-regexp --only-matching`; use \K to cut off a prefix.
 #
 # Honors GITHUB_TOKEN and GITLAB_TOKEN to avoid API rate limits and to read
 # private GitLab projects (releases only; tags are read with `git ls-remote`).
@@ -108,13 +115,29 @@ latest_tag_version() {
         | tail -1
 }
 
+# Print the highest version PKG_UPSTREAM_REGEX matches on PKG_UPSTREAM_URL.
+latest_url_version() {
+    local page
+    page="$(curl --fail --silent --show-error --location "$PKG_UPSTREAM_URL")" \
+        || die "could not fetch $PKG_UPSTREAM_URL"
+    { grep --perl-regexp --only-matching "$PKG_UPSTREAM_REGEX" <<< "$page" || true; } \
+        | sort --version-sort \
+        | tail -1
+}
+
 case "${PKG_UPSTREAM_TYPE:-}" in
 github | gitlab) ;;
+url)
+    if [ -z "${PKG_UPSTREAM_REGEX:-}" ]; then
+        die "PKG_UPSTREAM_TYPE='url' needs PKG_UPSTREAM_REGEX"
+    fi
+    PKG_UPSTREAM_SOURCE='url'
+    ;;
 none)
     echo "$dir: no upstream to watch (PKG_UPSTREAM_TYPE='none')" >&2
     exit 1
     ;;
-*) die "PKG_UPSTREAM_TYPE must be github, gitlab or none, not '${PKG_UPSTREAM_TYPE:-}'" ;;
+*) die "PKG_UPSTREAM_TYPE must be github, gitlab, url or none, not '${PKG_UPSTREAM_TYPE:-}'" ;;
 esac
 
 case "$PKG_UPSTREAM_SOURCE" in
@@ -127,6 +150,9 @@ releases)
     ;;
 tags)
     latest="$(latest_tag_version)"
+    ;;
+url)
+    latest="$(latest_url_version)"
     ;;
 *) die "PKG_UPSTREAM_SOURCE must be releases or tags, not '$PKG_UPSTREAM_SOURCE'" ;;
 esac

@@ -234,7 +234,7 @@ through FPM flags.
 
 ```bash
 PKG_VERSION='4.5.8'                 # upstream version we package (tag without prefix)
-PKG_UPSTREAM_TYPE='github'          # github | gitlab | none
+PKG_UPSTREAM_TYPE='github'          # github | gitlab | url | none
 PKG_UPSTREAM_PROJECT='nicolargo/glances'
 PKG_SOURCE_TARBALL="glances-${PKG_VERSION}.tar.gz"
 PKG_SOURCE_URL="https://github.com/${PKG_UPSTREAM_PROJECT}/archive/v${PKG_VERSION}/${PKG_SOURCE_TARBALL}"
@@ -256,6 +256,17 @@ PKG_SMOKE_TEST='glances --version'  # run as nobody after installing into a fres
 - `PKG_UPSTREAM_TAG_PREFIX`: stripped from the tag to get the version, default `v`.
   duplicity, for example, tags `rel.3.2.2`.
 - `PKG_UPSTREAM_URL`: the GitLab instance, default `https://gitlab.com`.
+
+`PKG_UPSTREAM_TYPE='url'` is for upstreams that publish binaries on a download page that
+lags behind their tags, such as the curaLINE Client. `PKG_UPSTREAM_URL` is then the page
+to read, and `PKG_UPSTREAM_REGEX` a Perl regex (`grep --perl-regexp --only-matching`)
+that matches the versions on it; `\K` cuts off a prefix. The highest match counts:
+
+```bash
+PKG_UPSTREAM_TYPE='url'
+PKG_UPSTREAM_URL='https://cdr.health.swisscom.ch/share/downloads/debian/Packages'
+PKG_UPSTREAM_REGEX='^Version: \K[0-9.]+$'
+```
 
 `PKG_UPSTREAM_TYPE='none'` is for packages without an upstream, such as
 `linuxfabrik-release`; they are rebuilt by changing their package directory. Such a
@@ -379,7 +390,8 @@ pre-commit, CodeQL, Scorecard, dependency review) keep their common names.
 1. **Version detection**: `lf-check-upstream.yml` runs hourly and compares each
    `PKG_VERSION` with the latest upstream version. When the upstream is ahead,
    it opens a bump pull request. Upstreams on GitHub and GitLab are supported, by
-   release or by tag (see `PKG_UPSTREAM_SOURCE`). An upstream that cannot be
+   release or by tag (see `PKG_UPSTREAM_SOURCE`), and download pages (see
+   `PKG_UPSTREAM_TYPE='url'`). An upstream that cannot be
    queried fails the run. Linuxfabrik's own projects do not have to wait for
    the next run: their release workflow sends a `repository_dispatch` of type
    `upstream-release` to this repository.
