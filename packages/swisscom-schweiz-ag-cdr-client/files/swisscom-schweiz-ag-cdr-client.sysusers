@@ -1,0 +1,3 @@
+# the account of swisscom-schweiz-ag-cdr-client.service, with the group of the
+# same name
+u swisscom-schweiz-ag-cdr-client - "curaLINE Client" /var/lib/swisscom-schweiz-ag/cdr-client /usr/sbin/nologin

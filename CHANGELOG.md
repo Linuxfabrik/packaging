@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 * acme.sh packages for RHEL 8 to 10, Fedora, SLES and openSUSE Leap 15 and 16, Debian 12 and 13 and Ubuntu 22.04 to 26.04, with all DNS API, deploy and notify hooks; acme.sh no longer upgrades itself, updates come through the package manager.
+* curaLINE Client packages (`swisscom-schweiz-ag-cdr-client`) for RHEL 8 to 10, Fedora, SLES and openSUSE Leap 15 and 16, Debian 12 and 13 and Ubuntu 22.04 to 26.04 (x86_64), repacked from Swisscom's release, with a static service account and the UI split off into `swisscom-schweiz-ag-cdr-client-gui` (not on RHEL 8 and SLES 15); they update hosts that installed Swisscom's .deb and keep its configuration.
 * Build pipeline that turns Linuxfabrik's own and third-party software into RPM and DEB packages for EL, Fedora, SLES, Debian and Ubuntu.
 * DEB packages carry the target distro in their version (e.g. `4.5.8-1+debian13`), so each suite gets its own build.
 * exoscale-cli (`exo`) packages for RHEL 8 to 10, Fedora, SLES and openSUSE Leap 15 and 16, Debian 12 and 13 and Ubuntu 22.04 to 26.04, built from source; they replace the upstream RPM mirrored under repo.linuxfabrik.ch/exoscale/cli and update hosts that installed it.

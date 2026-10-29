@@ -1,0 +1,23 @@
+#!/bin/sh
+set -e
+
+# Swisscom's .deb links /etc/swisscom-schweiz-ag/cdr-client to the
+# configuration below /usr/lib, which this package replaces with a directory.
+# Keep the configuration: copy it into a real directory before dpkg unpacks
+# this package over it. The postinst hands it to the service account.
+confdir=/etc/swisscom-schweiz-ag/cdr-client
+if [ "$1" = upgrade ] && [ -L "$confdir" ]; then
+    olddir="$(readlink --canonicalize "$confdir")"
+    rm "$confdir"
+    mkdir "$confdir"
+    for file in application-customer.yaml logback-service.xml; do
+        if [ -f "$olddir/$file" ]; then
+            cp "$olddir/$file" "$confdir/$file"
+            chmod 0640 "$confdir/$file"
+        fi
+    done
+fi
+
+#DEBHELPER#
+
+exit 0

@@ -1,0 +1,29 @@
+#!/bin/sh
+set -e
+
+if [ "$1" = configure ]; then
+    # The account has to exist before the configuration is handed to it and
+    # before the service is started by the debhelper snippet below.
+    systemd-sysusers swisscom-schweiz-ag-cdr-client.conf
+
+    # The configuration is not part of the package. It holds the client
+    # secret, the client rewrites it when it renews its credential, and it may
+    # belong to another account such as `hnet` (see the unit). Create it from
+    # the defaults if it is missing, and hand it to the service account if it
+    # belongs to root, since the client refuses to start with a file it does
+    # not own.
+    confdir=/etc/swisscom-schweiz-ag/cdr-client
+    for file in application-customer.yaml logback-service.xml; do
+        if [ ! -e "$confdir/$file" ]; then
+            install -m 0640 "/usr/lib/swisscom-schweiz-ag/cdr-client/lib/app/conf/$file" "$confdir/$file"
+        fi
+        if [ "$(stat --format='%u' "$confdir/$file")" = 0 ]; then
+            chown swisscom-schweiz-ag-cdr-client:swisscom-schweiz-ag-cdr-client "$confdir/$file"
+            chmod 0640 "$confdir/$file"
+        fi
+    done
+fi
+
+#DEBHELPER#
+
+exit 0

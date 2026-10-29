@@ -1,0 +1,52 @@
+Source: swisscom-schweiz-ag-cdr-client
+Maintainer: Linuxfabrik GmbH <info@linuxfabrik.ch>
+Section: misc
+Priority: optional
+Standards-Version: 4.6.2
+Homepage: https://github.com/swisscom/cdr-client
+Rules-Requires-Root: no
+Build-Depends: debhelper-compat (= 13)
+
+# The dependencies are listed by hand, as in Swisscom's .deb: dpkg-shlibdeps
+# knows nothing about the libraries of the bundled Java runtime, and the
+# libraries only the UI loads belong to the -gui package.
+Package: swisscom-schweiz-ag-cdr-client
+Architecture: amd64
+Depends: ${misc:Depends},
+         libc6,
+         systemd | systemd-standalone-sysusers | systemd-sysusers
+Description: client for the curaLINE Document Routing (CDR) service
+ The curaLINE Client exchanges documents with the curaLINE Document Routing
+ (CDR) service of Swisscom for participants in the Swiss healthcare system. It
+ uploads the files of a source folder and puts the documents it downloads into
+ a target folder.
+ .
+ This package contains the service. The UI is in
+ swisscom-schweiz-ag-cdr-client-gui.
+
+Package: swisscom-schweiz-ag-cdr-client-gui
+Architecture: amd64
+Depends: ${misc:Depends},
+         hicolor-icon-theme,
+         libasound2t64 | libasound2,
+         libdbus-1-3,
+         libfontconfig1,
+         libgl1,
+         libstdc++6,
+         libsystemd0,
+         libx11-6,
+         libxext6,
+         libxi6,
+         libxrender1,
+         libxtst6,
+         swisscom-schweiz-ag-cdr-client (= ${binary:Version})
+# Swisscom's .deb ships the UI in the base package. Unversioned, since its
+# versions carry no Debian revision to compare against; the base package of
+# this source ships none of the UI files.
+Replaces: swisscom-schweiz-ag-cdr-client
+Description: UI of the curaLINE Client
+ The curaLINE Client exchanges documents with the curaLINE Document Routing
+ (CDR) service of Swisscom for participants in the Swiss healthcare system.
+ .
+ This package contains the desktop UI, cdr-client-ui, to configure and watch
+ the client.
