@@ -277,6 +277,13 @@ gh release create sources-<name> --latest=false --title 'Sources of <name>' \
 gh release upload sources-<name> <tarball>
 ```
 
+Where the upstream signs its release tarballs, `PKG_SOURCE_SIGNATURE_URL` names the
+detached signature. `create-package.sh` fetches it next to the tarball, and the recipe
+verifies the tarball against the upstream key kept in `files/`, so the build fails on a
+tarball the upstream did not sign. On RPM that is `%{gpgverify}` in `%prep`, see
+`packages/fail2ban`. Take the key from the upstream and check its fingerprint against a
+second source, such as a keyserver or the distribution's packaging, before adding it.
+
 The spec uses `%{pkg_version}` / `%{pkg_release}`, injected by `create-rpm.sh`,
 so the version lives only in the manifest. The build iteration is not part of the
 manifest: the release workflow counts it up per version (see below).
