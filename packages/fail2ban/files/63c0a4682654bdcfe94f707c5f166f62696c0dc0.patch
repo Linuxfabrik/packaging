@@ -1,0 +1,69 @@
+From 63c0a4682654bdcfe94f707c5f166f62696c0dc0 Mon Sep 17 00:00:00 2001
+From: sebres <info@sebres.de>
+Date: Sat, 22 Aug 2026 13:26:02 +0200
+Subject: [PATCH] add default banactions for several `paths-*.conf` depending
+ on default net-filter for distribution; closes gh-4224, gh-4229
+
+---
+ config/paths-arch.conf    | 3 +++
+ config/paths-fedora.conf  | 3 +++
+ config/paths-freebsd.conf | 3 +++
+ config/paths-osx.conf     | 3 +++
+ 4 files changed, 12 insertions(+)
+
+diff --git a/config/paths-arch.conf b/config/paths-arch.conf
+index 270ce65d8c..af8c5087f9 100644
+--- a/config/paths-arch.conf
++++ b/config/paths-arch.conf
+@@ -9,6 +9,9 @@ after  = paths-overrides.local
+ 
+ [DEFAULT]
+ 
++banaction = nftables
++banaction_allports = nftables[type=allports]
++
+ apache_error_log = /var/log/httpd/*error_log
+ 
+ apache_access_log = /var/log/httpd/*access_log
+diff --git a/config/paths-fedora.conf b/config/paths-fedora.conf
+index 3d637e1fad..d2aba8240d 100644
+--- a/config/paths-fedora.conf
++++ b/config/paths-fedora.conf
+@@ -9,6 +9,9 @@ after  = paths-overrides.local
+ 
+ [DEFAULT]
+ 
++banaction = nftables
++banaction_allports = nftables[type=allports]
++
+ syslog_mail = /var/log/maillog
+ 
+ syslog_mail_warn = /var/log/maillog
+diff --git a/config/paths-freebsd.conf b/config/paths-freebsd.conf
+index 550ee8873c..91c6e67252 100644
+--- a/config/paths-freebsd.conf
++++ b/config/paths-freebsd.conf
+@@ -9,6 +9,9 @@ after  = paths-overrides.local
+ 
+ [DEFAULT]
+ 
++banaction = pf
++banaction_allports = pf[actiontype=<allports>]
++
+ # http://www.freebsd.org/doc/handbook/configtuning-syslog.html
+ #
+ syslog_mail = /var/log/maillog
+diff --git a/config/paths-osx.conf b/config/paths-osx.conf
+index 2fffd65ae0..b36d65f5ed 100644
+--- a/config/paths-osx.conf
++++ b/config/paths-osx.conf
+@@ -10,6 +10,9 @@ after  = paths-overrides.local
+ 
+ [DEFAULT]
+ 
++banaction = pf
++banaction_allports = pf[actiontype=<allports>]
++
+ syslog_mail = /var/log/mail.log
+ 
+ syslog_mail_warn = /var/log/mail.warn

@@ -20,3 +20,5 @@ repos:
         # Linuxfabrik repositories; do not append a trailing newline.
         exclude: '^LICENSE$'
       - id: 'trailing-whitespace'
+        # A patch is applied byte for byte; its context lines end in whitespace.
+        exclude: '\.patch$'
