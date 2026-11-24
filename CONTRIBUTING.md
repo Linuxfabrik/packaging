@@ -183,18 +183,24 @@ The dates, six months after the vendor date (sources:
 [Fedora](https://endoflife.date/fedora)):
 
 - 2027-02-28: Debian 11
-- 2027-10-01: Ubuntu 22.04
+- 2027-12-01: Ubuntu 22.04
 - 2027-12-02: Fedora 44
-- 2028-05-31: SLE 16
 - 2028-06-08: Fedora 45
 - 2028-12-31: Debian 12
+- 2029-05-31: SLE 16
 - 2029-11-30: RHEL 8
 - 2029-11-30: Ubuntu 24.04
 - 2030-12-31: Debian 13
-- 2031-10-31: Ubuntu 26.04
+- 2031-11-29: Ubuntu 26.04
 - 2032-01-31: SLE 15
 - 2032-11-30: RHEL 9
 - 2035-11-30: RHEL 10
+
+`lf-check-distros.yml` compares the targets with endoflife.date every day
+(`build/check-distros.sh`) and keeps one issue labelled `distro-release` per finding: a new
+release to add, a release past its drop date, or a date above that no longer matches the
+vendor's. It changes nothing itself, as a new target needs its containerfile and a green build
+of every package first.
 
 A release whose vendor date has passed may need its apt or dnf sources moved to an archive;
 `build/containerfiles/debian-v11` and `build/smoke-test-package.sh` show how for Debian 11.

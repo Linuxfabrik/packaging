@@ -1,0 +1,97 @@
+name: 'Linuxfabrik: 70 - Check target distros'
+
+# Compares the target distros with endoflife.date (build/check-distros.sh) and
+# keeps one issue per finding, labelled `distro-release`: a new release to add,
+# a release past its drop date, or a drop date in CONTRIBUTING.md that no
+# longer matches. An issue is closed once its finding is gone.
+#
+# Nothing is changed automatically: a new target needs its containerfile and a
+# green build of every package before it is added.
+
+on:
+  schedule:
+    # Daily at 05:23 UTC.
+    - cron: '23 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: 'read'
+
+concurrency:
+  group: 'lf-check-distros'
+  cancel-in-progress: false
+
+jobs:
+  check-distros:
+    runs-on:
+      - 'ubuntu-24.04'
+    timeout-minutes: 10
+    permissions:
+      contents: 'read'
+      issues: 'write'
+    steps:
+      - name: 'Harden the runner (Audit all outbound calls)'
+        uses: 'step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a' # v2.22.4
+        with:
+          egress-policy: 'audit'
+
+      - name: 'git clone https://github.com/Linuxfabrik/packaging'
+        uses: 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1' # v7.0.1
+
+      - name: 'Compare the target distros with endoflife.date'
+        run: |
+          bash build/check-distros.sh "$RUNNER_TEMP/distros"
+
+      # Runs only after a complete check, so that a failed one never closes an
+      # issue.
+      - name: 'Open, update and close the issues'
+        env:
+          FINDINGS: '${{ runner.temp }}/distros'
+          GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+          LABEL: 'distro-release'
+        run: |
+          gh label create "$LABEL" \
+              --color '0e8a16' \
+              --description 'Found by the daily check of the target distros' \
+              --force \
+              --repo "$GITHUB_REPOSITORY"
+
+          open_issues="$(gh issue list \
+              --json 'number,title' \
+              --label "$LABEL" \
+              --limit 1000 \
+              --repo "$GITHUB_REPOSITORY" \
+              --state 'open')"
+
+          titles="$RUNNER_TEMP/titles"
+          : > "$titles"
+          for finding in "$FINDINGS"/*.md; do
+            [ -e "$finding" ] || continue
+            title="$(head --lines=1 "$finding")"
+            echo "$title" >> "$titles"
+            body="$RUNNER_TEMP/body.md"
+            {
+              tail --lines=+3 "$finding"
+              echo
+              echo "Last checked: $(date --utc '+%Y-%m-%d'). The issue is closed once the check no longer finds this."
+            } > "$body"
+
+            number="$(jq --raw-output --arg title "$title" \
+                '.[] | select(.title == $title) | .number' <<< "$open_issues")"
+            if [ -n "$number" ]; then
+              echo "Update #$number: $title"
+              gh issue edit "$number" --body-file "$body" --repo "$GITHUB_REPOSITORY"
+            else
+              echo "Open: $title"
+              gh issue create --body-file "$body" --label "$LABEL" --repo "$GITHUB_REPOSITORY" --title "$title"
+            fi
+          done
+
+          jq --raw-output '.[] | "\(.number) \(.title)"' <<< "$open_issues" |
+            while read -r number title; do
+              if grep --quiet --line-regexp --fixed-strings "$title" "$titles"; then
+                continue
+              fi
+              echo "Close #$number: $title"
+              gh issue close "$number" --comment 'The daily check no longer finds this.' --repo "$GITHUB_REPOSITORY"
+            done
