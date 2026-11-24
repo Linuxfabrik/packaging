@@ -650,9 +650,14 @@ EOF
         for os in debian ubuntu; do
             dist="$PUBLISH_WEBROOT/$os/linuxfabrik/dists"
             [ -d "$dist" ] || continue
-            # freight keeps <suite>-<timestamp> directories next to the <suite> links
+            # freight keeps <suite>-<timestamp> directories next to the <suite> links.
+            # Sort by release, not by codename: bookworm (12) sorts before
+            # bullseye (11) otherwise.
             for codename in $(find "$dist" -mindepth 1 -maxdepth 1 -printf '%f\n' \
-                | sed -n -E 's/^([a-z]+)-(release|testing)$/\1/p' | sort -u); do
+                | sed -n -E 's/^([a-z]+)-(release|testing)$/\1/p' | sort -u \
+                | while read -r suite; do
+                    echo "$(deb_release_name "$suite") $suite"
+                done | sort -k2,2V | awk '{print $NF}'); do
                 version="$(deb_release_name "$codename")"
                 render_distro "$version ($codename)" deb "$(tr -d ' ' <<< "${version,,}")" \
                     "$dist/$codename-release/main/binary-amd64/Packages" \
