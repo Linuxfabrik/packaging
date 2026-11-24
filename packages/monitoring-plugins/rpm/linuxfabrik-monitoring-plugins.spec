@@ -36,7 +36,14 @@ Source1:        install-plugins.sh
 Source2:        install-venv.sh
 
 # The interpreter of the venv. RHEL 8 and SLE 15 default to Python 3.6, so the
-# venv is built on their python39 and python311 packages.
+# venv is built on their python39 and python311 packages. Fedora takes Python 3.14
+# as long as monitoring-plugins has no lockfile for a newer one: Fedora 44 ships
+# it as python3, Fedora 45 (Python 3.15) as the parallel python3.14 package.
+%if 0%{?fedora}
+%global lfmp_python python3.14
+%define python_build_deps python3.14, python3.14-devel
+%define python_deps python3.14
+%else
 %if 0%{?rhel} == 8
 %global lfmp_python python3.9
 %define python_build_deps python39, python39-devel, python39-pip
@@ -52,13 +59,14 @@ Source2:        install-venv.sh
 %define python_deps python3 >= 3.9
 %endif
 %endif
+%endif
 
 # gcc for the dependencies that come as an sdist with a C extension
 BuildRequires: gcc
 BuildRequires: %{python_build_deps}
 Requires: %{python_deps}
 
-%if 0%{?rhel}
+%if 0%{?rhel} || 0%{?fedora}
 Recommends:     %{name}-selinux = %{version}-%{release}
 %endif
 
@@ -66,7 +74,7 @@ Recommends:     %{name}-selinux = %{version}-%{release}
 %description
 This Enterprise Class Check Plugin Collection offers a bunch of Nagios-compatible check plugins for Icinga, Naemon, Nagios, OP5, Shinken, Sensu and other monitoring applications. Each plugin is a stand-alone command line tool that provides a specific type of check. Typically, your monitoring software will run these check plugins to determine the current status of hosts and services on your network.
 
-%if 0%{?rhel}
+%if 0%{?rhel} || 0%{?fedora}
 %package        selinux
 Summary:        SELinux support for Linuxfabrik's Monitoring Plugin Collection
 Requires:       %{name} = %{version}-%{release}
@@ -131,7 +139,7 @@ install --mode 0440 --no-target-directory assets/sudoers/RedHat-logging.sudoers 
 install --directory %{buildroot}%{_sysconfdir}/bash_completion.d
 install --mode 0644 --no-target-directory assets/bash-completion/linuxfabrik-monitoring-plugins.bash %{buildroot}%{_sysconfdir}/bash_completion.d/%{name}
 
-%if 0%{?rhel}
+%if 0%{?rhel} || 0%{?fedora}
 # The SELinux policy module is CIL, which semodule loads as it is: nothing to compile here,
 # and no module policy version for the build toolchain to raise beyond what an older host of
 # the same major release can read.
@@ -170,12 +178,13 @@ if [ "$1" -eq "0" ]; then
     rm -f %{sudoers_logging_dest}
 fi
 
-%if 0%{?rhel}
+%if 0%{?rhel} || 0%{?fedora}
 # The scriptlets never fail the transaction, but they say why they did not do their
 # job: a module that cannot be loaded silently would leave behind a package that
 # looks installed and does nothing at all. `nagios_run_sudo` and the file
 # contexts below `%{_libdir}/nagios/plugins` come from the distribution's nagios
 # policy, which EL10 does not carry, so both calls are allowed to do nothing.
+# Fedora carries it, as EL8 and EL9 do.
 %post selinux
 # Load the module on every install and upgrade, not only the first one: on an upgrade rpm runs
 # the postun scriptlet of the package being replaced, which cannot know this file.
@@ -205,7 +214,7 @@ fi
 %{_datadir}/%{name}/sudoers/
 %license LICENSE
 
-%if 0%{?rhel}
+%if 0%{?rhel} || 0%{?fedora}
 %files selinux
 %{_datadir}/selinux/packages/%{name}.cil
 %endif
