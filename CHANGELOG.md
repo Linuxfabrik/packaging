@@ -17,7 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 * fail2ban packages for RHEL 8 to 10, built from the latest upstream release instead of the EPEL one, which lags behind; every release has to pass the upstream test cases of all filters before it is published.
 * Fedora 45 packages of everything built for Fedora 44 (acme.sh, curaLINE Client, exoscale-cli, FirewallFabrik, glances, Grafana gcx, `linuxfabrik-release`).
 * FirewallFabrik packages for RHEL 10, Fedora 44, Debian 13 and Ubuntu 26.04, split into the compilers (`linuxfabrik-firewallfabrik`) and the GUI (`linuxfabrik-firewallfabrik-gui`), with man pages; they replace the `firewallfabrik` packages from mirror.plustech.de.
-* glances packages for EL, Fedora, Debian and Ubuntu.
+* glances packages for RHEL 10, Fedora 44 and 45, SLES and openSUSE Leap 16, Debian 12 and 13 and Ubuntu 24.04 and 26.04, with the web server; they update the older glances of the distribution.
 * Grafana gcx packages (`grafana-gcx`) for RHEL 8 to 10, Fedora, SLES and openSUSE Leap 15 and 16, Debian 12 and 13 and Ubuntu 22.04 to 26.04, built from source, with shell completions; usage telemetry and the check for new releases on GitHub are off.
 * Linuxfabrik Monitoring Plugins packages for RHEL 8 to 10, SLES and openSUSE Leap 15 and 16, Debian 11 to 13 and Ubuntu 22.04 to 26.04; they replace the packages from repo.linuxfabrik.ch/monitoring-plugins/. Until 2026-12-31 they are published there as well, so hosts that still use it get the updates; switch them to `linuxfabrik-release` before that date.
 * `linuxfabrik-release` sets up the Linuxfabrik repository with one install command, for RHEL 8 to 10, Fedora, SLES and openSUSE Leap 15 and 16, Debian 11 to 13 and Ubuntu 22.04 to 26.04.
