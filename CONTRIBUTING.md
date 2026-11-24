@@ -164,10 +164,10 @@ package only targets the formats and distros it needs:
   with `dnf builddep` on EL/Fedora and with a zypper fallback on SLES.
 - **DEB** (`PKG_DEB_DEBIAN_DIR`, `PKG_DEB_DISTROS`): `debian-*`, `ubuntu-*`. Built with `debuild`.
 
-Targets are RHEL 8, 9 and 10 and compatibles (`rocky-v8`, `rocky-v9`, `rocky-v10`), Fedora
-(`fedora-v44`), SLES 15 and 16 (`sles-v15`, `sles-v16`, also serving openSUSE Leap), Debian 11,
-12 and 13 (`debian-v11`, `debian-v12`, `debian-v13`) and Ubuntu 22.04, 24.04 and 26.04
-(`ubuntu-v2204`, `ubuntu-v2404`, `ubuntu-v2604`).
+Targets are RHEL 8, 9 and 10 and compatibles (`rocky-v8`, `rocky-v9`, `rocky-v10`), Fedora 44
+and 45 (`fedora-v44`, `fedora-v45`), SLES 15 and 16 (`sles-v15`, `sles-v16`, also serving
+openSUSE Leap), Debian 11, 12 and 13 (`debian-v11`, `debian-v12`, `debian-v13`) and Ubuntu
+22.04, 24.04 and 26.04 (`ubuntu-v2204`, `ubuntu-v2404`, `ubuntu-v2604`).
 
 A release stays a target until six months after its vendor stops shipping updates free of
 charge: Maintenance Support for RHEL, LTS for Debian, Standard Support for Ubuntu, General
@@ -186,6 +186,7 @@ The dates, six months after the vendor date (sources:
 - 2027-10-01: Ubuntu 22.04
 - 2027-12-02: Fedora 44
 - 2028-05-31: SLE 16
+- 2028-06-08: Fedora 45
 - 2028-12-31: Debian 12
 - 2029-11-30: RHEL 8
 - 2029-11-30: Ubuntu 24.04

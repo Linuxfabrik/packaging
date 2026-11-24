@@ -47,10 +47,10 @@ RHEL 8, 9 and 10 and compatibles (replace `el10` with `el8` or `el9`):
 sudo dnf install https://repo.linuxfabrik.ch/linuxfabrik-release-latest-el10.noarch.rpm
 ```
 
-Fedora:
+Fedora 44 and 45 (replace `fedora45` with `fedora44`):
 
 ```bash
-sudo dnf install https://repo.linuxfabrik.ch/linuxfabrik-release-latest-fedora44.noarch.rpm
+sudo dnf install https://repo.linuxfabrik.ch/linuxfabrik-release-latest-fedora45.noarch.rpm
 ```
 
 SLES and openSUSE Leap 15 and 16 (replace `sle16` with `sle15`):

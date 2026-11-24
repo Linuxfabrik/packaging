@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * DEB packages carry the target distro in their version (e.g. `4.5.8-1+debian13`), so each suite gets its own build.
 * exoscale-cli (`exo`) packages for RHEL 8 to 10, Fedora, SLES and openSUSE Leap 15 and 16, Debian 12 and 13 and Ubuntu 22.04 to 26.04, built from source; they replace the upstream RPM mirrored under repo.linuxfabrik.ch/exoscale/cli and update hosts that installed it.
 * fail2ban packages for RHEL 8 to 10, built from the latest upstream release instead of the EPEL one, which lags behind; every release has to pass the upstream test cases of all filters before it is published.
+* Fedora 45 packages of everything built for Fedora 44 (acme.sh, curaLINE Client, exoscale-cli, FirewallFabrik, glances, Grafana gcx, `linuxfabrik-release`).
 * FirewallFabrik packages for RHEL 10, Fedora 44, Debian 13 and Ubuntu 26.04, split into the compilers (`linuxfabrik-firewallfabrik`) and the GUI (`linuxfabrik-firewallfabrik-gui`), with man pages; they replace the `firewallfabrik` packages from mirror.plustech.de.
 * glances packages for EL, Fedora, Debian and Ubuntu.
 * Grafana gcx packages (`grafana-gcx`) for RHEL 8 to 10, Fedora, SLES and openSUSE Leap 15 and 16, Debian 12 and 13 and Ubuntu 22.04 to 26.04, built from source, with shell completions; usage telemetry and the check for new releases on GitHub are off.
