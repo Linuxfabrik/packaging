@@ -1,0 +1,22 @@
+Description: Ignore roundcube IMAP connection-refused errors
+ The roundcube-auth filter matches on "IMAP Error" lines.  When the IMAP
+ server is down roundcube logs "Could not connect to ... Connection refused"
+ for every request, which is not an authentication failure; ignore it so a
+ local IMAP outage does not produce spurious bans.
+Author: Sylvestre Ledru <sylvestre@debian.org>
+Forwarded: no
+Last-Update: 2026-09-07
+
+Index: fail2ban/config/filter.d/roundcube-auth.conf
+===================================================================
+--- fail2ban.orig/config/filter.d/roundcube-auth.conf
++++ fail2ban/config/filter.d/roundcube-auth.conf
+@@ -17,7 +17,7 @@ prefregex = ^\s*(\[\])?(%(__hostname)s\s
+ 
+ failregex = ^(?:Login failed|(?i:Failed) login) for <F-USER>(?:(?P<simple>\S+)|.*)</F-USER> (?:against \S+ )?from <ADDR>(?:(?:\([^\)]*\))?\.(?! from ) (?(simple)(?:\S+(?! from ) )*|(?:(?! from ).)*(?: user=(?P=user))? )in \S+\.php on line \d+| in session \w+)?(?: \([^\)]*\))?$
+ 
+-ignoreregex = 
++ignoreregex = Could not connect to .* Connection refused
+ 
+ journalmatch = SYSLOG_IDENTIFIER=roundcube
+ 

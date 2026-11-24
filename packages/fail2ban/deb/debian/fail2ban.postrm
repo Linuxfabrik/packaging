@@ -1,0 +1,20 @@
+#!/bin/sh
+# postrm script for fail2ban
+#
+# Linuxfabrik: the files Debian lists in debian/fail2ban.purge for
+# dh-sequence-cruft, which needs debhelper compat 14; removed on purge as the
+# postrm of Debian's 1.1.0-8 did.
+
+set -e
+
+case "$1" in
+    purge)
+        rm -f /etc/fail2ban.conf
+        rm -f /var/log/fail2ban*
+        rm -f /var/lib/fail2ban/fail2ban.sqlite3
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

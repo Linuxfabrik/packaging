@@ -1,0 +1,38 @@
+Description: Debian-specific paths and log backends
+ On Debian these services log through syslog to the journal, so reading the
+ journal is more reliable than tailing files that may not exist.
+ .
+ Also correct two paths that upstream defaults do not match on Debian:
+ syslog_local0, since Debian's rsyslog writes /var/log/syslog rather than
+ /var/log/messages, and asterisk_log, since Asterisk 19 changed the default
+ logger.conf target from messages to messages.log.
+Author: Sylvestre Ledru <sylvestre@debian.org>
+Bug-Debian: https://bugs.debian.org/983534
+Bug-Debian: https://bugs.debian.org/1024822
+Forwarded: not-needed
+Last-Update: 2026-09-07
+
+Index: fail2ban/config/paths-debian.conf
+===================================================================
+--- fail2ban.orig/config/paths-debian.conf
++++ fail2ban/config/paths-debian.conf
+@@ -34,3 +34,19 @@ exim_main_log = /var/log/exim4/mainlog
+ proftpd_log = /var/log/proftpd/proftpd.log
+ 
+ roundcube_errors_log = /var/log/roundcube/errors.log
++
++# Debian's rsyslog does not write /var/log/messages.
++syslog_local0 = /var/log/syslog
++
++# Since Asterisk 19 the default logger.conf writes messages.log, not messages.
++asterisk_log = /var/log/asterisk/messages.log
++
++# In Debian, these services will log to the journal via syslog, so use the
++# journal by default.  (sshd_backend and postfix_backend are already set
++# upstream.)
++syslog_backend = systemd
++dropbear_backend = systemd
++proftpd_backend = systemd
++pureftpd_backend = systemd
++wuftpd_backend = systemd
++dovecot_backend = systemd

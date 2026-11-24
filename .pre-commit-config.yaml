@@ -21,4 +21,5 @@ repos:
         exclude: '^LICENSE$'
       - id: 'trailing-whitespace'
         # A patch is applied byte for byte; its context lines end in whitespace.
-        exclude: '\.patch$'
+        # Debian's quilt patches below debian/patches/ often have no .patch suffix.
+        exclude: '(\.patch$|/debian/patches/)'

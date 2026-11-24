@@ -1,0 +1,7 @@
+fail2ban: national-encoding [*usr/lib/python3/dist-packages/fail2ban/tests/files/testcase-wrong-char.log*]
+fail2ban: national-encoding [*usr/lib/python3/dist-packages/fail2ban/tests/files/testcase01.log*]
+
+# /usr/bin/fail2ban-python is a symlink to the python3 interpreter, shipped by
+# this package; upstream uses it as the shebang for helper scripts so that they
+# always run under the interpreter fail2ban itself was built for.
+fail2ban: unusual-interpreter fail2ban-python *

@@ -1,0 +1,9 @@
+# fail2ban ships its own copies of the asyncore and asynchat modules under
+# fail2ban/compat/ and prepends that directory to sys.path (see
+# fail2ban/helpers.py), precisely because Python 3.12 removed them from the
+# standard library.  The smtpd import is inside a try/except in a test helper
+# and is skipped when the module is absent.  The build-time test suite passes
+# on Python 3.14.
+uses-deprecated-python-stdlib asynchat *
+uses-deprecated-python-stdlib asyncore *
+uses-deprecated-python-stdlib smtpd *

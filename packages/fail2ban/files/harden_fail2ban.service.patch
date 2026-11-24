@@ -1,0 +1,27 @@
+---
+ files/fail2ban.service.in |   12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+Index: fail2ban-1.1.0/files/fail2ban.service.in
+===================================================================
+--- fail2ban-1.1.0.orig/files/fail2ban.service.in
++++ fail2ban-1.1.0/files/fail2ban.service.in
+@@ -5,6 +5,18 @@ After=network.target iptables.service fi
+ PartOf=iptables.service firewalld.service ip6tables.service ipset.service nftables.service
+ 
+ [Service]
++# added automatically, for details please see
++# https://en.opensuse.org/openSUSE:Security_Features#Systemd_hardening_effort
++ProtectSystem=full
++ProtectHome=true
++PrivateDevices=true
++ProtectHostname=true
++ProtectClock=true
++ProtectKernelTunables=true
++ProtectKernelModules=true
++ProtectControlGroups=true
++RestrictRealtime=true
++# end of automatic additions 
+ Type=simple
+ EnvironmentFile=-/etc/sysconfig/fail2ban
+ Environment="PYTHONNOUSERSITE=1"

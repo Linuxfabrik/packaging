@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Breaking Changes
+
+* fail2ban on Debian 12 and Ubuntu 22.04: after the update from the distribution package, fail2ban bans through nftables instead of iptables, as upstream does since 1.1.0 and Debian 13 and Ubuntu 24.04 already do, and the package pulls in nftables. To keep iptables, set `banaction = iptables-multiport` and `banaction_allports = iptables-allports` in the `[DEFAULT]` section of `/etc/fail2ban/jail.local`.
+
 ### Added
 
 * acme.sh packages for RHEL 8 to 10, Fedora, SLES and openSUSE Leap 15 and 16, Debian 12 and 13 and Ubuntu 22.04 to 26.04, with all DNS API, deploy and notify hooks; acme.sh no longer upgrades itself, updates come through the package manager.
@@ -14,7 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 * Build pipeline that turns Linuxfabrik's own and third-party software into RPM and DEB packages for EL, Fedora, SLES, Debian and Ubuntu.
 * DEB packages carry the target distro in their version (e.g. `4.5.8-1+debian13`), so each suite gets its own build.
 * exoscale-cli (`exo`) packages for RHEL 8 to 10, Fedora, SLES and openSUSE Leap 15 and 16, Debian 12 and 13 and Ubuntu 22.04 to 26.04, built from source; they replace the upstream RPM mirrored under repo.linuxfabrik.ch/exoscale/cli and update hosts that installed it.
-* fail2ban packages for RHEL 8 to 10, built from the latest upstream release instead of the EPEL one, which lags behind; every release has to pass the upstream test cases of all filters before it is published.
+* fail2ban packages for RHEL 8 to 10, Fedora 44 and 45, SLES and openSUSE Leap 15 and 16, Debian 12 and 13 and Ubuntu 22.04 to 26.04, built from the latest upstream release instead of the older one the distributions ship; they update the distribution package in place, and every release has to pass the upstream test cases of all filters before it is published.
 * Fedora 45 packages of everything built for Fedora 44 (acme.sh, curaLINE Client, exoscale-cli, FirewallFabrik, glances, Grafana gcx, `linuxfabrik-release`).
 * FirewallFabrik packages for RHEL 10, Fedora 44, Debian 13 and Ubuntu 26.04, split into the compilers (`linuxfabrik-firewallfabrik`) and the GUI (`linuxfabrik-firewallfabrik-gui`), with man pages; they replace the `firewallfabrik` packages from mirror.plustech.de.
 * glances packages for RHEL 10, Fedora 44 and 45, SLES and openSUSE Leap 16, Debian 12 and 13 and Ubuntu 24.04 and 26.04, with the web server; they update the older glances of the distribution.
