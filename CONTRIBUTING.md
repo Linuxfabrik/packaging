@@ -174,24 +174,27 @@ Each `package.conf` declares, per format, the recipe and the distro targets it a
 - **RPM** (`PKG_RPM_SPEC`, `PKG_RPM_DISTROS`): EL (`rocky-*`, `rhel-*`, `almalinux-*`, `centos-*`), `fedora-*` and `sles-*`. Built with `rpmbuild`; build dependencies are resolved with `dnf builddep` on EL/Fedora and with a zypper fallback on SLES.
 - **DEB** (`PKG_DEB_DEBIAN_DIR`, `PKG_DEB_DISTROS`): `debian-*`, `ubuntu-*`. Built with `debuild`.
 
-Targets are RHEL 8, 9 and 10 and compatibles (`rocky-v8`, `rocky-v9`, `rocky-v10`), Fedora (`fedora-v44`), SLES 15 and 16 (`sles-v15`, `sles-v16`, also serving openSUSE Leap), Debian 11, 12 and 13 (`debian-v11`, `debian-v12`, `debian-v13`) and Ubuntu 22.04, 24.04 and 26.04 (`ubuntu-v2204`, `ubuntu-v2404`, `ubuntu-v2604`).
+Targets are RHEL 8, 9 and 10 and compatibles (`rocky-v8`, `rocky-v9`, `rocky-v10`), Fedora 44 and 45 (`fedora-v44`, `fedora-v45`), SLES 15 and 16 (`sles-v15`, `sles-v16`, also serving openSUSE Leap), Debian 11, 12 and 13 (`debian-v11`, `debian-v12`, `debian-v13`) and Ubuntu 22.04, 24.04 and 26.04 (`ubuntu-v2204`, `ubuntu-v2404`, `ubuntu-v2604`).
 
 A release stays a target until six months after its vendor stops shipping updates free of charge: Maintenance Support for RHEL, LTS for Debian, Standard Support for Ubuntu, General Support for SLE, end of life for Fedora. Paid extensions (RHEL ELS, Debian ELTS, Ubuntu Pro / ESM, SUSE LTSS) do not count. The six months give administrators one more maintenance window after the vendor date. After that, the release is dropped from every `package.conf` and its containerfile goes with it. A package may leave a release earlier, for example when the distribution's dependencies are too old for it.
 
 The dates, six months after the vendor date (sources: [RHEL](https://endoflife.date/rhel), [Debian](https://endoflife.date/debian), [Ubuntu](https://endoflife.date/ubuntu), [SLES](https://endoflife.date/sles), [Fedora](https://endoflife.date/fedora)):
 
 - 2027-02-28: Debian 11
-- 2027-10-01: Ubuntu 22.04
+- 2027-12-01: Ubuntu 22.04
 - 2027-12-02: Fedora 44
-- 2028-05-31: SLE 16
+- 2028-06-08: Fedora 45
 - 2028-12-31: Debian 12
+- 2029-05-31: SLE 16
 - 2029-11-30: RHEL 8
 - 2029-11-30: Ubuntu 24.04
 - 2030-12-31: Debian 13
-- 2031-10-31: Ubuntu 26.04
+- 2031-11-29: Ubuntu 26.04
 - 2032-01-31: SLE 15
 - 2032-11-30: RHEL 9
 - 2035-11-30: RHEL 10
+
+`lf-check-distros.yml` compares the targets with endoflife.date every day (`build/check-distros.sh`) and keeps one issue labelled `distro-release` per finding: a new release to add, a release past its drop date, or a date above that no longer matches the vendor's. It changes nothing itself, as a new target needs its containerfile and a green build of every package first.
 
 A release whose vendor date has passed may need its apt or dnf sources moved to an archive; `build/containerfiles/debian-v11` and `build/smoke-test-package.sh` show how for Debian 11.
 
