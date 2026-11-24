@@ -41,5 +41,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 * RPM packages carry a changelog entry for their own version instead of a fixed one.
+* The start page of repo.linuxfabrik.ch lists Debian releases in version order (11, 12, 13) instead of by codename.
 
 [Unreleased]: https://github.com/Linuxfabrik/packaging/commits/main
