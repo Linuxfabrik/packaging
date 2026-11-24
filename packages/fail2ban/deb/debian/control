@@ -1,0 +1,56 @@
+Source: fail2ban
+Section: net
+Maintainer: Linuxfabrik GmbH <info@linuxfabrik.ch>
+Build-Depends:
+ debhelper-compat (= 13),
+ dh-sequence-python3,
+ gpg,
+ gpgv,
+ pkgconf,
+ python3,
+ python3-pyinotify <!nocheck>,
+ python3-setuptools,
+ sqlite3 <!nocheck>,
+ systemd-dev | systemd,
+Homepage: https://www.fail2ban.org
+Standards-Version: 4.7.4
+
+Package: fail2ban
+Architecture: all
+# Linuxfabrik: nftables is a hard dependency, not a recommendation as in
+# Debian. The default banaction is nftables, so without it, as after an
+# install with --no-install-recommends, every ban fails silently.
+Depends:
+ nftables,
+ python3-systemd,
+ ${misc:Depends},
+ ${python3:Depends},
+Recommends:
+ python3-pyinotify,
+ whois,
+Suggests:
+ iptables,
+ mailx,
+ monit,
+ sqlite3,
+ system-log-daemon,
+Description: ban hosts that cause multiple authentication errors
+ Fail2ban monitors log files (e.g. /var/log/auth.log,
+ /var/log/apache/access.log) and temporarily or persistently bans
+ failure-prone addresses by updating existing firewall rules.  Fail2ban
+ allows easy specification of different actions to be taken such as to ban
+ an IP using iptables or hostsdeny rules, or simply to send a notification
+ email.
+ .
+ By default, it comes with filter expressions for various services
+ (sshd, Apache, proftpd, sasl, etc.) but configuration can be
+ easily extended for monitoring any other text file.  All filters and
+ actions are given in the config files, thus fail2ban can be adopted
+ to be used with a variety of files and firewalls.  The default banaction
+ is nftables.  Following recommends are listed:
+ .
+  - whois -- used by a number of *mail-whois* actions to send notification
+    emails with whois information about attacker hosts. Unless you will use
+    those you don't need whois
+  - python3-pyinotify -- unless you monitor services logs via systemd, you
+    need pyinotify for efficient monitoring for log files changes

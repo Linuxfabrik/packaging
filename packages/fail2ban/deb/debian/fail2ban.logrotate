@@ -1,0 +1,23 @@
+/var/log/fail2ban.log {
+
+    weekly
+    rotate 4
+    compress
+    # Do not rotate if empty
+    notifempty
+
+    delaycompress
+    missingok
+    postrotate
+	# Do nothing if the package has been removed but not purged
+	# (Debian #782256), and do not fail the whole logrotate run when the
+	# server is not running, e.g. early at boot (Debian #935778).
+	test -x /usr/bin/fail2ban-client || exit 0
+	fail2ban-client flushlogs 1>/dev/null || true
+    endscript
+
+    # If fail2ban runs as non-root it still needs to have write access
+    # to logfiles.
+    # create 640 fail2ban adm
+    create 640 root adm
+}

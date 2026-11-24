@@ -1,0 +1,36 @@
+Description: Make the asterisk log path configurable via paths-*.conf
+ jail.conf hard-codes /var/log/asterisk/messages, which cannot be overridden
+ from a distribution paths file.  Introduce an asterisk_log variable in
+ paths-common.conf, keeping the existing value as the default, so that
+ paths-debian.conf can point it at the file Debian's Asterisk actually writes.
+Author: Dale Richards <dale@dalerichards.net>
+Bug-Debian: https://bugs.debian.org/1024822
+Forwarded: no
+Last-Update: 2026-09-07
+
+Index: fail2ban/config/jail.conf
+===================================================================
+--- fail2ban.orig/config/jail.conf
++++ fail2ban/config/jail.conf
+@@ -759,7 +759,7 @@ logpath = /var/log/nsd.log
+ port     = 5060,5061
+ action_  = %(default/action_)s[name=%(__name__)s-tcp, protocol="tcp"]
+            %(default/action_)s[name=%(__name__)s-udp, protocol="udp"]
+-logpath  = /var/log/asterisk/messages
++logpath  = %(asterisk_log)s
+ maxretry = 10
+ 
+ 
+Index: fail2ban/config/paths-common.conf
+===================================================================
+--- fail2ban.orig/config/paths-common.conf
++++ fail2ban/config/paths-common.conf
+@@ -85,6 +85,8 @@ dovecot_log = %(syslog_mail_warn)s
+ dovecot_backend = %(default_backend)s
+ 
+ # Seems to be set at compile time only to LOG_LOCAL0 (src/const.h) at Notice level
++asterisk_log = /var/log/asterisk/messages
++
+ solidpop3d_log = %(syslog_local0)s
+ 
+ mysql_log = /var/log/mariadb/mariadb.log

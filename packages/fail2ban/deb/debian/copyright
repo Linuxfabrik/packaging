@@ -1,0 +1,68 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: Fail2Ban
+Upstream-Contact:
+ https://github.com/fail2ban/fail2ban/issues
+ https://lists.sourceforge.net/lists/listinfo/fail2ban-users
+Source: https://github.com/fail2ban/fail2ban
+Comment:
+ This package was originally debianized by Yaroslav Halchenko
+ <debian@onerussian.com> on Mon Jul  4 14:41:34 HST 2005
+
+Files: *
+Copyright: 2004-2008, Cyril Jaquier
+           2008-2026, Fail2Ban Contributors
+License: GPL-2+
+Comment:
+ Upstream's per-file __copyright__ strings additionally name Yaroslav
+ Halchenko, Steven Hiscocks, Daniel Black, Serg G. Brester, Lee Clemens,
+ Alexander Koeppe and Arturo 'Buanzo' Busleiman; see the individual file
+ headers and the THANKS file for the full list of contributors.
+
+Files: fail2ban/compat/asyncore.py
+       fail2ban/compat/asynchat.py
+Copyright: 1996, Sam Rushing
+License: Rushing
+Comment:
+ Copies of the Python standard library modules of the same names, bundled by
+ upstream because Python 3.12 removed them.  Modifications are held by their
+ respective authors.
+
+Files: debian/*
+Copyright: 2006-2018, Yaroslav Halchenko <debian@onerussian.com>
+           2018-2026, Debian Python Team <team+python@tracker.debian.org>
+License: GPL-2+
+
+License: GPL-2+
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or
+ (at your option) any later version.
+ .
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ .
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+Comment:
+ On Debian systems, the complete text of the GNU General Public
+ License, version 2, can be found in /usr/share/common-licenses/GPL-2.
+
+License: Rushing
+ Permission to use, copy, modify, and distribute this software and
+ its documentation for any purpose and without fee is hereby
+ granted, provided that the above copyright notice appear in all
+ copies and that both that copyright notice and this permission
+ notice appear in supporting documentation, and that the name of Sam
+ Rushing not be used in advertising or publicity pertaining to
+ distribution of the software without specific, written prior
+ permission.
+ .
+ SAM RUSHING DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+ INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN
+ NO EVENT SHALL SAM RUSHING BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+ CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+ OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
+ NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+ CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.

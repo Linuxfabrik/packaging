@@ -1,0 +1,8 @@
+deb_init_paths
+deb_manpages_reportbug
+0002-ENH-verify-that-use_stock_cfg-was-not-provided-while.patch
+deb_no_iptables_service
+roundcube.diff
+update_backend_system.diff
+deb_sshd_journalmatch.diff
+deb_asterisk_log_path.diff

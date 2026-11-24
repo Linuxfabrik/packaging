@@ -1,0 +1,16 @@
+# Conffiles that upstream stopped shipping but that were never cleaned up
+# on upgraded systems (Debian #990144).  The prior-version is the version
+# introducing the cleanup, so the removal fires for everyone still carrying
+# a leftover, whatever they are upgrading from.
+rm_conffile /etc/fail2ban/filter.d/sshd-ddos.conf 1.1.1-1~
+rm_conffile /etc/fail2ban/filter.d/postfix-sasl.conf 1.1.1-1~
+rm_conffile /etc/fail2ban/filter.d/postfix-rbl.conf 1.1.1-1~
+rm_conffile /etc/fail2ban/action.d/nftables-common.conf 1.1.1-1~
+rm_conffile /etc/fail2ban/action.d/iptables-common.conf 1.1.1-1~
+rm_conffile /etc/fail2ban/action.d/badips.conf 1.1.1-1~
+rm_conffile /etc/fail2ban/action.d/badips.py 1.1.1-1~
+# Moved to /usr/share/bash-completion/completions/fail2ban.
+rm_conffile /etc/bash_completion.d/fail2ban 1.1.1-1~
+# monit(1) only reads /etc/monit/conf.d and /etc/monit/conf-enabled; the
+# Debian convention is to ship snippets in conf-available (Debian #991367).
+mv_conffile /etc/monit/monitrc.d/fail2ban /etc/monit/conf-available/fail2ban 1.1.1-1~

@@ -1,0 +1,45 @@
+Description: Use Debian paths in the sysvinit script
+ Point the init script at /usr/bin/fail2ban-client rather than the
+ upstream /usr/local/bin default, and use /run rather than the
+ deprecated /var/run for the socket and runtime directory.
+Author: Yaroslav Halchenko <debian@onerussian.com>
+Forwarded: not-needed
+Last-Update: 2026-09-07
+
+Index: fail2ban/files/debian-initd
+===================================================================
+--- fail2ban.orig/files/debian-initd
++++ fail2ban/files/debian-initd
+@@ -28,13 +28,13 @@ NAME="fail2ban"
+ 
+ # fail2ban-client is not a daemon itself but starts a daemon and
+ # loads its with configuration
+-DAEMON="/usr/local/bin/$NAME-client"
++DAEMON="/usr/bin/$NAME-client"
+ SCRIPTNAME="/etc/init.d/$NAME"
+ 
+ # Ad-hoc way to parse out socket file name
+ SOCKFILE="$(grep -h '^[^#]*socket *=' "/etc/$NAME/$NAME.conf" "/etc/$NAME/$NAME.local" 2>/dev/null \
+ 	| tail -n 1 | sed -e 's/.*socket *= *//g' -e 's/ *$//g')"
+-[ -z "$SOCKFILE" ] && SOCKFILE="/var/run/fail2ban.sock"
++[ -z "$SOCKFILE" ] && SOCKFILE="/run/fail2ban.sock"
+ 
+ # Exit if the package is not installed
+ [ -x "$DAEMON" ] || exit 0
+@@ -110,13 +110,13 @@ do_start()
+ 		DAEMON_ARGS="$DAEMON_ARGS -x"
+ 	fi
+ 
+-	# Assure that /var/run/fail2ban exists
+-	[ -d /var/run/fail2ban ] || mkdir -p /var/run/fail2ban
++	# Assure that /run/fail2ban exists
++	[ -d /run/fail2ban ] || mkdir -p /run/fail2ban
+ 
+ 	if [ "$FAIL2BAN_USER" != root ]; then
+ 		# Make the socket directory, IP lists and fail2ban log
+ 		# files writable by fail2ban
+-		chown "$FAIL2BAN_USER" /var/run/fail2ban
++		chown "$FAIL2BAN_USER" /run/fail2ban
+ 		# Create the logfile if it doesn't exist
+ 		touch /var/log/fail2ban.log
+ 		chown "$FAIL2BAN_USER" /var/log/fail2ban.log

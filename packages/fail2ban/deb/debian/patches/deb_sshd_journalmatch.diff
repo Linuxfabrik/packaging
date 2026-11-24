@@ -1,0 +1,22 @@
+Description: Match the Debian sshd systemd unit name
+ Debian ships the OpenSSH server unit as ssh.service (sshd.service is only
+ an Alias), so the journal's _SYSTEMD_UNIT field carries "ssh.service".
+ Upstream's journalmatch looks for sshd.service and therefore never matches
+ on Debian.
+Author: Sylvestre Ledru <sylvestre@debian.org>
+Forwarded: not-needed
+Last-Update: 2026-09-07
+
+Index: fail2ban/config/filter.d/sshd.conf
+===================================================================
+--- fail2ban.orig/config/filter.d/sshd.conf
++++ fail2ban/config/filter.d/sshd.conf
+@@ -126,7 +126,7 @@ ignoreregex =
+ 
+ maxlines = 1
+ 
+-journalmatch = _SYSTEMD_UNIT=sshd.service + _COMM=sshd + _COMM=sshd-session
++journalmatch = _SYSTEMD_UNIT=ssh.service + _COMM=sshd + _COMM=sshd-session
+ 
+ # DEV Notes:
+ #
