@@ -1,0 +1,29 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: syft
+Upstream-Contact: Anchore, Inc. <https://github.com/anchore/syft/issues>
+Source: https://github.com/anchore/syft
+
+Files: *
+Copyright: Anchore, Inc.
+License: Apache-2.0
+ On Debian systems, the complete text of the Apache License version 2.0 can be
+ found in "/usr/share/common-licenses/Apache-2.0".
+Comment: The binary also contains the Go modules syft links statically. They
+ are downloaded during the build and are not part of the source package. They
+ are licensed under the Apache License version 2.0, the MIT, BSD-2-Clause,
+ BSD-2-Clause-Views, BSD-3-Clause, 0BSD, ISC, CC0-1.0, Unicode-DFS-2016 and
+ Unlicense licenses and the Mozilla Public License 2.0, and
+ github.com/spdx/tools-golang under the Apache License version 2.0 or the GNU
+ General Public License version 2 or later. The license file of each module is
+ shipped in /usr/share/doc/syft/module-licenses/.
+
+Files: debian/*
+Copyright: 2026 Linuxfabrik GmbH <info@linuxfabrik.ch>
+License: Unlicense
+ This is free and unencumbered software released into the public domain.
+ .
+ Anyone is free to copy, modify, publish, use, compile, sell, or distribute
+ this software, either in source code form or as a compiled binary, for any
+ purpose, commercial or non-commercial, and by any means.
+ .
+ For more information, please refer to <https://unlicense.org/>.

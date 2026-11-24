@@ -1,0 +1,24 @@
+Source: syft
+Maintainer: Linuxfabrik GmbH <info@linuxfabrik.ch>
+Section: admin
+Priority: optional
+Standards-Version: 4.6.2
+Homepage: https://github.com/anchore/syft
+Rules-Requires-Root: no
+Build-Depends: ca-certificates,
+               curl,
+               debhelper-compat (= 13)
+
+Package: syft
+Architecture: any
+Depends: ${misc:Depends},
+         ${shlibs:Depends}
+Description: generate a Software Bill of Materials from filesystems and images
+ Syft generates a Software Bill of Materials (SBOM) from filesystems and
+ container images, in CycloneDX, SPDX and its own JSON format. It catalogs the
+ packages of the operating system (rpm, dpkg, apk) and of the language
+ ecosystems such as Python, Java, JavaScript, Ruby and Go.
+ .
+ This package turns off the check for new syft releases at anchore.io by
+ default (turn it on with SYFT_CHECK_FOR_APP_UPDATE=true); updates come through
+ the package manager.

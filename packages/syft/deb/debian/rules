@@ -1,0 +1,26 @@
+#!/usr/bin/make -f
+
+include /usr/share/dpkg/pkg-info.mk
+
+%:
+	dh $@
+
+override_dh_auto_clean:
+	# upstream's Makefile runs its task toolchain through go, which only
+	# build-syft.sh fetches; the build starts from an unpacked tarball anyway.
+
+override_dh_auto_build:
+	# create-deb.sh puts the orig tarball next to the source tree
+	bash debian/build-syft.sh $(DEB_VERSION_UPSTREAM) ../syft_$(DEB_VERSION_UPSTREAM).orig.tar.gz
+
+override_dh_auto_test:
+	# upstream's Go tests need its task toolchain and test fixtures; the smoke
+	# test covers the installed binary.
+
+override_dh_auto_install:
+	install -D -m 0755 bin/syft debian/syft/usr/bin/syft
+	install -D -m 0644 completion.bash debian/syft/usr/share/bash-completion/completions/syft
+	install -D -m 0644 completion.fish debian/syft/usr/share/fish/vendor_completions.d/syft.fish
+	install -D -m 0644 completion.zsh debian/syft/usr/share/zsh/vendor-completions/_syft
+	install -d debian/syft/usr/share/doc/syft
+	cp --recursive module-licenses debian/syft/usr/share/doc/syft/
