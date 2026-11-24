@@ -118,6 +118,21 @@ repo_target() {
     esac
 }
 
+# A short path to $2, through a link $PUBLISH_STATE_DIR/v/$1, as freight's
+# VARCACHE. freight-cache imports the key into a temporary GnuPG home below
+# VARCACHE, and the path of its gpg-agent socket has to fit the limit of a Unix
+# socket (108 bytes with the closing NUL). Below
+# $PUBLISH_WEBROOT/monitoring-plugins/ubuntu it came to 107 characters with a
+# seven-digit PID, and gpg-agent failed to start; through the link below the
+# default PUBLISH_STATE_DIR it is 88. Verified with freight 0.3.13 and GnuPG
+# 2.3.3 on Rocky 9.
+short_varcache() {
+    local link="$PUBLISH_STATE_DIR/v/$1"
+    mkdir --parents "$(dirname "$link")" "$2"
+    ln --force --no-dereference --symbolic "$2" "$link"
+    echo "$link"
+}
+
 # Write the freight configuration for one DEB repository (debian or ubuntu).
 freight_conf() {
     local os="$1"
@@ -126,7 +141,7 @@ freight_conf() {
 VARLIB='$PUBLISH_FREIGHT_LIB/linuxfabrik-$os'
 # freight defaults to "i386 amd64"; arm64 clients would not see Architecture: all
 ARCHS='amd64 arm64'
-VARCACHE='$PUBLISH_WEBROOT/$os/linuxfabrik'
+VARCACHE='$(short_varcache "lf-$os" "$PUBLISH_WEBROOT/$os/linuxfabrik")'
 ORIGIN='Linuxfabrik'
 LABEL='Linuxfabrik'
 CACHE='off'
@@ -171,7 +186,7 @@ legacy_mp_freight_conf() {
     cat > "$conf" <<EOF
 VARLIB='$PUBLISH_FREIGHT_LIB/monitoring-plugins-$os'
 ARCHS='amd64 arm64'
-VARCACHE='$PUBLISH_WEBROOT/monitoring-plugins/$os'
+VARCACHE='$(short_varcache "mp-$os" "$PUBLISH_WEBROOT/monitoring-plugins/$os")'
 ORIGIN='Linuxfabrik Monitoring Plugins'
 LABEL='Linuxfabrik Monitoring Plugins'
 CACHE='off'
