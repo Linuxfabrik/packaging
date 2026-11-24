@@ -1,6 +1,7 @@
 name: 'Linuxfabrik: 40 - Release'
 
-# Builds every package changed on main and publishes the result as a GitHub
+# Builds every package on main without a release of its current state
+# (build/unreleased-packages.sh) and publishes the result as a GitHub
 # prerelease `<package>-<version>-<iteration>`. The prerelease is the `testing`
 # channel; `lf-promote.yml` turns it into a full release (the `release` channel)
 # after seven days unless someone rejects it. The repository server pulls,
@@ -52,7 +53,6 @@ jobs:
 
       - id: 'releases'
         env:
-          BEFORE_SHA: '${{ github.event.before }}'
           INPUT_PACKAGE: '${{ inputs.package }}'
         run: |
           if [ "$GITHUB_EVENT_NAME" = 'workflow_dispatch' ]; then
@@ -62,7 +62,7 @@ jobs:
             fi
             names="$INPUT_PACKAGE"
           else
-            names="$(bash build/changed-packages.sh "$BEFORE_SHA" "$GITHUB_SHA")"
+            names="$(bash build/unreleased-packages.sh "$GITHUB_SHA")"
           fi
 
           # releases: one per package. builds: one per package and architecture
