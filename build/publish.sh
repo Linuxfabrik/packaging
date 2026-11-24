@@ -138,13 +138,17 @@ EOF
     echo "$conf"
 }
 
-# Whether a package goes to the former Monitoring Plugins tree as well: one of
-# linuxfabrik-monitoring-plugins*, and PUBLISH_LEGACY_MP_UNTIL not yet past.
+# Whether a package ($1, built for distro $2) goes to the former Monitoring
+# Plugins tree as well: one of linuxfabrik-monitoring-plugins*, not for Fedora,
+# which the former tree never served, and PUBLISH_LEGACY_MP_UNTIL not yet past.
 # ISO dates compare as strings.
 legacy_mp() {
     case "$(basename "$1")" in
     linuxfabrik-monitoring-plugins[-_]*) ;;
     *) return 1 ;;
+    esac
+    case "$2" in
+    fedora-v*) return 1 ;;
     esac
     [[ ! "$(date +%F)" > "$PUBLISH_LEGACY_MP_UNTIL" ]]
 }
@@ -267,7 +271,7 @@ publish_release() {
                 cp "$file" "$repo_dir/"
                 rpm_dirty[$repo_dir]=1
             done
-            if legacy_mp "$file"; then
+            if legacy_mp "$file" "$distro"; then
                 legacy="$(legacy_mp_target "$distro")"
                 repo_dir="$PUBLISH_WEBROOT/monitoring-plugins/$legacy/$channel"
                 for arch in $(rpm_arches "$file"); do
@@ -282,7 +286,7 @@ publish_release() {
             read -r os codename <<< "$target"
             freight-add --conf="$(freight_conf "$os")" "$file" "apt/$codename-$channel"
             deb_dirty[$os]=1
-            if legacy_mp "$file"; then
+            if legacy_mp "$file" "$distro"; then
                 freight-add --conf="$(legacy_mp_freight_conf "$os")" "$file" "apt/$codename-$channel"
                 legacy_deb_dirty[$os]=1
                 echo "$tag: $(basename "$file") -> monitoring-plugins/$os $codename $channel"
@@ -380,7 +384,7 @@ reject_release() {
                 rm --force "$repo_dir/$(basename "$file")"
                 rpm_dirty[$repo_dir]=1
             done
-            if legacy_mp "$file"; then
+            if legacy_mp "$file" "$distro"; then
                 legacy="$(legacy_mp_target "$distro")"
                 repo_dir="$PUBLISH_WEBROOT/monitoring-plugins/$legacy/testing"
                 for arch in $(rpm_arches "$file"); do
@@ -394,7 +398,7 @@ reject_release() {
             # freight-cache rebuilds the suite from what is left in its library
             rm --force "$PUBLISH_FREIGHT_LIB/linuxfabrik-$os/apt/$codename-testing/$(basename "$file")"
             deb_dirty[$os]=1
-            if legacy_mp "$file"; then
+            if legacy_mp "$file" "$distro"; then
                 rm --force "$PUBLISH_FREIGHT_LIB/monitoring-plugins-$os/apt/$codename-testing/$(basename "$file")"
                 legacy_deb_dirty[$os]=1
             fi
