@@ -488,8 +488,11 @@ render_distro() {
         while read -r name; do
             rel="$(channel_packages "${kind%%-*}" "$release" | awk -v n="$name" '$1 == n {print $2}')"
             tst="$(channel_packages "${kind%%-*}" "$testing" | awk -v n="$name" '$1 == n {print $2}')"
-            # testing only matters where it is ahead of release
-            [ "$tst" = "$rel" ] && tst=''
+            # testing only matters where it is ahead of release; a promoted
+            # prerelease stays in testing, so it can also be older
+            if [ -n "$rel" ] && [ -n "$tst" ] && dpkg --compare-versions "$tst" le "$rel"; then
+                tst=''
+            fi
             echo "<tr><td>$name</td><td>${rel:-&ndash;}</td><td>${tst:-&ndash;}</td></tr>"
             # for the overview table that render_index prints after all distros
             printf '%s\t%s\t%s\t%s\t%s\n' "$family" "$version" "$name" "$rel" "$tst" >> "$RENDER_OVERVIEW"
