@@ -1,7 +1,13 @@
-# Ported from the Fedora fail2ban spec (rawhide, 1.1.1-1). Linuxfabrik deltas:
+# Ported from the Fedora fail2ban spec (rawhide, 1.1.1-1) for Fedora and EL.
+# SLES and openSUSE Leap get the openSUSE spec instead, from
+# files/fail2ban-opensuse.spec, which keeps the package layout of Leap's
+# fail2ban (one package, paths-opensuse.conf) so it updates hosts that
+# installed it; its header lists the deltas to openSUSE. Linuxfabrik deltas to
+# Fedora:
 # - version and release injected from package.conf
 # - hostsdeny subpackage off on EL (no tcp_wrappers since EL 8)
-# - shorewall subpackages off on EL 8 too, as Fedora does on EL 9 and later
+# - shorewall subpackages off on Fedora and EL 8 too, as Fedora does on EL 9
+#   and later
 # - SELinux type enforcement file of the EPEL 8 and EPEL 9 branches on EL 8 and
 #   EL 9; the rawhide one uses interfaces their policies lack
 # - setup.py build on EL 8, whose rpm has no %%generate_buildrequires, with
@@ -15,14 +21,17 @@
 %{!?pkg_version: %global pkg_version 0}
 %{!?pkg_release: %global pkg_release 0}
 
-# Linuxfabrik: off on EL 8 as well. fail2ban-shorewall and -shorewall-lite
-# conflict with each other, so the smoke test, which installs every package
-# built, could not install them, and LFOps manages firewalld or nftables.
-%if 0%{?rhel} >= 8
-%bcond_with     shorewall
+%if 0%{?suse_version}
+# rpm skips the include on Fedora and EL, also where the file is missing.
+# Verified with rpm 4.14 on Rocky 8 and SLES 15 and rpm 4.20 on SLES 16.
+%include %{_sourcedir}/fail2ban-opensuse.spec
 %else
-%bcond_without  shorewall
-%endif
+
+# Linuxfabrik: off on Fedora and EL 8 as well. fail2ban-shorewall and
+# -shorewall-lite conflict with each other, so the smoke test, which installs
+# every package built, could not install them, and LFOps manages firewalld or
+# nftables.
+%bcond_with     shorewall
 
 # The hostsdeny action needs tcp_wrappers, which EL dropped in EL 8.
 %if 0%{?rhel}
@@ -473,6 +482,8 @@ fi
 %files systemd
 %config(noreplace) %{_sysconfdir}/fail2ban/jail.d/00-systemd.conf
 
+
+%endif
 
 %changelog
 * Mon Nov 16 2026 Linuxfabrik GmbH <info@linuxfabrik.ch> - 1.1.1-1
