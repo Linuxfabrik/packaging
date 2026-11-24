@@ -47,5 +47,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 * RPM packages carry a changelog entry for their own version instead of a fixed one.
 * The start page of repo.linuxfabrik.ch lists Debian releases in version order (11, 12, 13) instead of by codename.
+* The start page of repo.linuxfabrik.ch no longer shows an older testing version next to a newer release.
 
 [Unreleased]: https://github.com/Linuxfabrik/packaging/commits/main
