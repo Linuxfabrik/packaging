@@ -32,6 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 * Syft packages (`syft`) for RHEL 8 to 10, Fedora, SLES and openSUSE Leap 15 and 16, Debian 12 and 13 and Ubuntu 22.04 to 26.04, built from source, with shell completions; the check for new releases at anchore.io is off, and they update hosts that installed upstream's RPM or DEB.
 * The published packages are scanned daily for known vulnerabilities in the dependencies they bundle, such as Go modules and the Python venv of the Monitoring Plugins.
 * Packages are built for a distribution release until six months after its vendor stops shipping free updates, giving one more maintenance window.
+* wkhtmltopdf packages (`wkhtmltox`) for RHEL 10, repacked from upstream's final RHEL 9 build with patched Qt; they update hosts that installed upstream's RPM. Upstream is archived, so render trusted HTML only.
 
 ### Changed
 
