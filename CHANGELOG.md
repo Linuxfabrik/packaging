@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 * New upstream releases are packaged and published automatically, first to the `testing` channel and after seven days to `release`.
 * One signed repository per distribution for all Linuxfabrik packages on repo.linuxfabrik.ch, with signed metadata for `repo_gpgcheck=1`.
 * Packages are built and smoke-tested for aarch64 (arm64) as well, natively on arm64 build machines.
+* pngquant packages for RHEL 10, which neither the distribution nor EPEL 10 ships, built from Fedora's recipe.
 * Syft packages (`syft`) for RHEL 8 to 10, Fedora, SLES and openSUSE Leap 15 and 16, Debian 12 and 13 and Ubuntu 22.04 to 26.04, built from source, with shell completions; the check for new releases at anchore.io is off, and they update hosts that installed upstream's RPM or DEB.
 * The published packages are scanned daily for known vulnerabilities in the dependencies they bundle, such as Go modules and the Python venv of the Monitoring Plugins.
 * Packages are built for a distribution release until six months after its vendor stops shipping free updates, giving one more maintenance window.
